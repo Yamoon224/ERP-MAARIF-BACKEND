@@ -11,7 +11,8 @@ use App\Models\SchoolClass;
 /**
  * Scolarite mensuelle d'une classe. Route dediee, reservee a la comptabilite :
  * modifier la classe elle-meme (nom, niveau) reste un droit d'administration
- * academique distinct.
+ * academique distinct. Le changement de tarif se repercute sur les echeances
+ * non reglees (voir SchoolClassFeeObserver).
  */
 class FeeController extends Controller
 {

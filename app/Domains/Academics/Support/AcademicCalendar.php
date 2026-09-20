@@ -3,7 +3,7 @@
 namespace App\Domains\Academics\Support;
 
 use App\Models\Term;
-use Illuminate\Support\CarbonImmutable;
+use Carbon\CarbonImmutable;
 
 /**
  * Mois scolaires d'une annee, deduits de ses trimestres (une annee en compte

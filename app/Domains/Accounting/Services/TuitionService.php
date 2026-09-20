@@ -4,6 +4,7 @@ namespace App\Domains\Accounting\Services;
 
 use App\Domains\Academics\Support\AcademicCalendar;
 use App\Domains\Accounting\Contracts\InstallmentRepositoryContract;
+use App\Domains\Students\Contracts\EnrollmentRepositoryContract;
 use App\Models\Enrollment;
 use App\Models\TuitionInstallment;
 use Illuminate\Support\Carbon;
@@ -20,7 +21,27 @@ use Illuminate\Support\Facades\DB;
  */
 final class TuitionService
 {
-    public function __construct(private readonly InstallmentRepositoryContract $installments) {}
+    public function __construct(
+        private readonly InstallmentRepositoryContract $installments,
+        private readonly EnrollmentRepositoryContract $enrollments,
+    ) {}
+
+    /**
+     * Aligne les echeances de toute une classe : a appeler quand son tarif
+     * change. Sans cela, les impayes d'une classe dont le tarif vient d'etre
+     * fixe n'apparaitraient dans aucun rapport tant que personne n'a ouvert le
+     * releve de chaque eleve.
+     */
+    public function syncClass(string $schoolClassId): void
+    {
+        $this->enrollments->forClass($schoolClassId)->each(fn (Enrollment $enrollment) => $this->ensureInstallments($enrollment));
+    }
+
+    /** Idem pour une annee entiere : a appeler quand ses trimestres (donc ses mois) changent. */
+    public function syncAcademicYear(string $academicYear): void
+    {
+        $this->enrollments->forYear($academicYear)->each(fn (Enrollment $enrollment) => $this->ensureInstallments($enrollment));
+    }
 
     /**
      * Cree les echeances manquantes et aligne le montant des echeances non

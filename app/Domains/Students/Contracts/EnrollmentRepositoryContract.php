@@ -31,4 +31,10 @@ interface EnrollmentRepositoryContract
     public function paginateForYear(string $academicYear, array $filters = [], int $perPage = 15): LengthAwarePaginator;
 
     public function countForYear(string $academicYear, ?string $schoolClassId = null): int;
+
+    /** @return Collection<int, Enrollment> */
+    public function forClass(string $schoolClassId): Collection;
+
+    /** @return Collection<int, Enrollment> */
+    public function forYear(string $academicYear): Collection;
 }

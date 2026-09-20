@@ -11,6 +11,9 @@ use App\Domains\Academics\Repositories\EloquentTermRepository;
 use App\Domains\Accounting\Contracts\AccountingReportRepositoryContract;
 use App\Domains\Accounting\Contracts\InstallmentRepositoryContract;
 use App\Domains\Accounting\Contracts\PaymentRepositoryContract;
+use App\Domains\Accounting\Observers\EnrollmentTuitionObserver;
+use App\Domains\Accounting\Observers\SchoolClassFeeObserver;
+use App\Domains\Accounting\Observers\TermCalendarObserver;
 use App\Domains\Accounting\Repositories\EloquentAccountingReportRepository;
 use App\Domains\Accounting\Repositories\EloquentInstallmentRepository;
 use App\Domains\Accounting\Repositories\EloquentPaymentRepository;
@@ -32,7 +35,10 @@ use App\Domains\Students\Repositories\EloquentEnrollmentRepository;
 use App\Domains\Students\Repositories\EloquentStudentRepository;
 use App\Domains\Users\Contracts\UserRepositoryContract;
 use App\Domains\Users\Repositories\EloquentUserRepository;
+use App\Models\Enrollment;
+use App\Models\SchoolClass;
 use App\Models\Student;
+use App\Models\Term;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -76,6 +82,12 @@ class DomainServiceProvider extends ServiceProvider
         // Un eleve est toujours inscrit pour l'annee de sa classe (voir
         // StudentEnrollmentObserver).
         Student::observe(StudentEnrollmentObserver::class);
+
+        // Et l'echeancier de scolarite d'une inscription suit son inscription
+        // et le calendrier des trimestres (voir TuitionService).
+        Enrollment::observe(EnrollmentTuitionObserver::class);
+        Term::observe(TermCalendarObserver::class);
+        SchoolClass::observe(SchoolClassFeeObserver::class);
     }
 
     /**

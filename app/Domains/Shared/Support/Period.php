@@ -3,9 +3,8 @@
 namespace App\Domains\Shared\Support;
 
 use App\Models\Term;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\CarbonImmutable;
 use Illuminate\Validation\Rule;
 
 /**
@@ -131,10 +130,5 @@ final class Period
     public function toArray(): array
     {
         return ['from' => $this->from->toDateString(), 'to' => $this->to->toDateString()];
-    }
-
-    public function contains(Carbon|CarbonImmutable $date): bool
-    {
-        return $date->between($this->from, $this->to->endOfDay());
     }
 }

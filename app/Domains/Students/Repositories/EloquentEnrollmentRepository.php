@@ -57,6 +57,22 @@ final class EloquentEnrollmentRepository implements EnrollmentRepositoryContract
             ->withQueryString();
     }
 
+    public function forClass(string $schoolClassId): Collection
+    {
+        return Enrollment::query()
+            ->with('schoolClass:id,name,level,monthly_fee')
+            ->where('school_class_id', $schoolClassId)
+            ->get();
+    }
+
+    public function forYear(string $academicYear): Collection
+    {
+        return Enrollment::query()
+            ->with('schoolClass:id,name,level,monthly_fee')
+            ->where('academic_year', $academicYear)
+            ->get();
+    }
+
     public function countForYear(string $academicYear, ?string $schoolClassId = null): int
     {
         return Enrollment::query()
