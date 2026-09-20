@@ -86,6 +86,19 @@ final class EloquentGradeRepository implements GradeRepositoryContract
             ->get();
     }
 
+    public function forStudentsAndTerms(array $studentIds, array $termIds): Collection
+    {
+        if ($studentIds === [] || $termIds === []) {
+            return new Collection;
+        }
+
+        return Grade::query()
+            ->with('subject:id,name,code,coefficient')
+            ->whereIn('student_id', $studentIds)
+            ->whereIn('term_id', $termIds)
+            ->get();
+    }
+
     public function findOrFail(string $id): Grade
     {
         return Grade::query()->with(['student', 'subject', 'term'])->findOrFail($id);

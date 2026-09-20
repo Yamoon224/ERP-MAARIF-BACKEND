@@ -42,6 +42,10 @@ class RolesAndPermissionsSeeder extends Seeder
         'notifications.view' => 'Consulter le journal des notifications envoyees aux tuteurs.',
         'accounting.view' => 'Consulter les paiements de scolarite, les releves et les impayes.',
         'accounting.manage' => 'Encaisser et annuler des paiements, fixer les frais de scolarite des classes.',
+        'admissions.view' => 'Consulter les candidatures d'admission.',
+        'admissions.manage' => 'Deposer, instruire et transformer en inscription les candidatures d'admission.',
+        'results.view' => 'Consulter les resultats par trimestre, semestre et annee.',
+        'results.manage' => 'Valider ou corriger les decisions de passage de fin d'annee.',
     ];
 
     /**
@@ -51,7 +55,7 @@ class RolesAndPermissionsSeeder extends Seeder
      */
     private const ROLES = [
         'admin' => ['*'],
-        'teacher' => ['students.view', 'academics.view', 'grades.manage', 'attendance.manage'],
+        'teacher' => ['students.view', 'academics.view', 'grades.manage', 'attendance.manage', 'results.view'],
         'accountant' => ['students.view', 'academics.view', 'accounting.view', 'accounting.manage'],
     ];
 

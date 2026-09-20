@@ -9,6 +9,7 @@ use App\Domains\Accounting\Http\Controllers\FeeController;
 use App\Domains\Accounting\Http\Controllers\PaymentController;
 use App\Domains\Accounting\Http\Controllers\TuitionController;
 use App\Domains\Attendance\Http\Controllers\AttendanceController;
+use App\Domains\Admissions\Http\Controllers\AdmissionController;
 use App\Domains\Auth\Http\Controllers\ParentAuthController;
 use App\Domains\Auth\Http\Controllers\StaffAuthController;
 use App\Domains\Discipline\Http\Controllers\SanctionController;
@@ -18,6 +19,7 @@ use App\Domains\Grades\Http\Controllers\GradeController;
 use App\Domains\Notifications\Http\Controllers\NotificationLogController;
 use App\Domains\Reporting\Http\Controllers\DashboardController;
 use App\Domains\Reporting\Http\Controllers\TermOverviewController;
+use App\Domains\Results\Http\Controllers\ResultsController;
 use App\Domains\Shared\Http\Controllers\HealthController;
 use App\Domains\Students\Http\Controllers\EnrollmentController;
 use App\Domains\Students\Http\Controllers\StudentController;
@@ -111,6 +113,29 @@ Route::middleware(['auth:sanctum', 'account_type:staff'])->group(function (): vo
         Route::post('/students/{student}/enrollments', [EnrollmentController::class, 'store']);
     });
 
+    Route::middleware('permission:results.view')->group(function (): void {
+        Route::get('/results', [ResultsController::class, 'forClass']);
+        Route::get('/students/{student}/results', [ResultsController::class, 'forStudent']);
+    });
+    Route::middleware('permission:results.manage')->group(function (): void {
+        Route::put('/enrollments/{enrollment}/decision', [ResultsController::class, 'saveDecision']);
+        Route::post('/classes/{schoolClass}/decisions/validate', [ResultsController::class, 'validateDecisions']);
+    });
+
+    Route::middleware('permission:admissions.view')->group(function (): void {
+        Route::get('/admissions/summary', [AdmissionController::class, 'summary']);
+        Route::get('/admissions', [AdmissionController::class, 'index']);
+        Route::get('/admissions/{admission}', [AdmissionController::class, 'show']);
+    });
+    Route::middleware('permission:admissions.manage')->group(function (): void {
+        Route::post('/admissions', [AdmissionController::class, 'store']);
+        Route::put('/admissions/{admission}', [AdmissionController::class, 'update']);
+        Route::patch('/admissions/{admission}', [AdmissionController::class, 'update']);
+        Route::delete('/admissions/{admission}', [AdmissionController::class, 'destroy']);
+        Route::post('/admissions/{admission}/status', [AdmissionController::class, 'changeStatus']);
+        Route::post('/admissions/{admission}/enroll', [AdmissionController::class, 'enroll']);
+    });
+
     Route::middleware('permission:grades.manage')->group(function (): void {
         Route::apiResource('grades', GradeController::class);
     });
@@ -162,6 +187,7 @@ Route::middleware(['auth:sanctum', 'account_type:parent'])->group(function (): v
     Route::get('/parent/academic-years', [AcademicYearController::class, 'index']);
     Route::put('/parent/me/password', [ParentAuthController::class, 'changePassword']);
     Route::get('/parent/bulletin', [BulletinController::class, 'mine']);
+    Route::get('/parent/results', [ResultsController::class, 'mine']);
     Route::get('/parent/attendance', [AttendanceController::class, 'mine']);
     Route::get('/parent/summons', [SummonController::class, 'mine']);
     Route::get('/parent/sanctions', [SanctionController::class, 'mine']);

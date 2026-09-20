@@ -17,6 +17,8 @@ use App\Domains\Accounting\Observers\TermCalendarObserver;
 use App\Domains\Accounting\Repositories\EloquentAccountingReportRepository;
 use App\Domains\Accounting\Repositories\EloquentInstallmentRepository;
 use App\Domains\Accounting\Repositories\EloquentPaymentRepository;
+use App\Domains\Admissions\Contracts\AdmissionRepositoryContract;
+use App\Domains\Admissions\Repositories\EloquentAdmissionRepository;
 use App\Domains\Attendance\Contracts\AttendanceRepositoryContract;
 use App\Domains\Attendance\Repositories\EloquentAttendanceRepository;
 use App\Domains\Discipline\Contracts\SanctionRepositoryContract;
@@ -28,6 +30,8 @@ use App\Domains\Grades\Repositories\EloquentGradeRepository;
 use App\Domains\Notifications\Contracts\NotificationSenderContract;
 use App\Domains\Notifications\Senders\ArrayNotificationSender;
 use App\Domains\Notifications\Senders\LogNotificationSender;
+use App\Domains\Results\Contracts\PromotionDecisionRepositoryContract;
+use App\Domains\Results\Repositories\EloquentPromotionDecisionRepository;
 use App\Domains\Students\Contracts\EnrollmentRepositoryContract;
 use App\Domains\Students\Contracts\StudentRepositoryContract;
 use App\Domains\Students\Observers\StudentEnrollmentObserver;
@@ -70,6 +74,9 @@ class DomainServiceProvider extends ServiceProvider
         PaymentRepositoryContract::class => EloquentPaymentRepository::class,
         InstallmentRepositoryContract::class => EloquentInstallmentRepository::class,
         AccountingReportRepositoryContract::class => EloquentAccountingReportRepository::class,
+
+        AdmissionRepositoryContract::class => EloquentAdmissionRepository::class,
+        PromotionDecisionRepositoryContract::class => EloquentPromotionDecisionRepository::class,
     ];
 
     public function register(): void

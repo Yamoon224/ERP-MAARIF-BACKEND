@@ -17,6 +17,17 @@ interface GradeRepositoryContract
     /** @return Collection<int, Grade> */
     public function forStudentAndTerm(string $studentId, string $termId): Collection;
 
+    /**
+     * Notes de plusieurs eleves sur un ensemble de trimestres, matiere
+     * chargee : c'est la matiere premiere des resultats de classe, lue en une
+     * seule requete plutot qu'une par eleve.
+     *
+     * @param  list<string>  $studentIds
+     * @param  list<string>  $termIds
+     * @return Collection<int, Grade>
+     */
+    public function forStudentsAndTerms(array $studentIds, array $termIds): Collection;
+
     public function findOrFail(string $id): Grade;
 
     /** @param  array<string, mixed>  $attributes */
