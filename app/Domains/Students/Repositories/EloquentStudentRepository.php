@@ -4,6 +4,7 @@ namespace App\Domains\Students\Repositories;
 
 use App\Domains\Shared\Support\Sort;
 use App\Domains\Students\Contracts\StudentRepositoryContract;
+use App\Models\Payment;
 use App\Models\Student;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
@@ -22,6 +23,7 @@ final class EloquentStudentRepository implements StudentRepositoryContract
         return Student::query()
             ->with('schoolClass:id,name,level')
             ->when($filters['school_class_id'] ?? null, fn ($query, $id) => $query->where('school_class_id', $id))
+            ->when($filters['academic_year'] ?? null, fn ($query, $year) => $query->enrolledInYear($year))
             ->when(
                 array_key_exists('is_active', $filters) && $filters['is_active'] !== null,
                 fn ($query) => $query->where('is_active', $filters['is_active']),
@@ -57,5 +59,12 @@ final class EloquentStudentRepository implements StudentRepositoryContract
     public function delete(Student $student): void
     {
         $student->delete();
+    }
+
+    public function hasPayments(Student $student): bool
+    {
+        return Payment::query()
+            ->whereHas('enrollment', fn ($enrollment) => $enrollment->where('student_id', $student->id))
+            ->exists();
     }
 }

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Database\Factories\StudentFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -73,6 +74,33 @@ class Student extends Authenticatable
     public function schoolClass(): BelongsTo
     {
         return $this->belongsTo(SchoolClass::class);
+    }
+
+    /** Historique d'inscriptions : une par annee scolaire.
+     *
+     * @return HasMany<Enrollment, $this>
+     */
+    public function enrollments(): HasMany
+    {
+        return $this->hasMany(Enrollment::class);
+    }
+
+    /**
+     * Eleves inscrits dans cette classe. Passe par l'inscription plutot que
+     * par `school_class_id` (la classe *actuelle*) : c'est ce qui permet de
+     * relire la composition d'une classe d'une annee passee.
+     *
+     * @param  Builder<Student>  $query
+     */
+    public function scopeEnrolledInClass(Builder $query, string $schoolClassId): void
+    {
+        $query->whereHas('enrollments', fn (Builder $enrollments) => $enrollments->where('school_class_id', $schoolClassId));
+    }
+
+    /** @param  Builder<Student>  $query */
+    public function scopeEnrolledInYear(Builder $query, string $academicYear): void
+    {
+        $query->whereHas('enrollments', fn (Builder $enrollments) => $enrollments->where('academic_year', $academicYear));
     }
 
     /** @return HasMany<Grade, $this> */

@@ -17,6 +17,7 @@ class SchoolClassResource extends JsonResource
             'name' => $this->name,
             'level' => $this->level,
             'academic_year' => $this->academic_year,
+            'monthly_fee' => (float) $this->monthly_fee,
             'students_count' => $this->whenCounted('students'),
             'main_teacher' => $this->whenLoaded('mainTeacher', fn () => $this->mainTeacher ? [
                 'id' => $this->mainTeacher->id,

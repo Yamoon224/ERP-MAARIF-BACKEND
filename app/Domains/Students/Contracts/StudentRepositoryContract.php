@@ -22,4 +22,7 @@ interface StudentRepositoryContract
     public function update(Student $student, array $attributes): Student;
 
     public function delete(Student $student): void;
+
+    /** Un eleve avec des paiements de scolarite ne doit jamais disparaitre de la comptabilite. */
+    public function hasPayments(Student $student): bool;
 }

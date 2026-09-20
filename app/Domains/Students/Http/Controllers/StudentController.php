@@ -22,7 +22,7 @@ class StudentController extends Controller
     {
         return StudentResource::collection(
             $this->students->list(
-                $request->only('search', 'school_class_id', 'is_active', 'sort', 'direction'),
+                $request->only('search', 'school_class_id', 'academic_year', 'is_active', 'sort', 'direction'),
                 $request->integer('per_page', 15),
             ),
         );

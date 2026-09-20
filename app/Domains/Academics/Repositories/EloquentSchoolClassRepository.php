@@ -6,6 +6,7 @@ use App\Domains\Academics\Contracts\SchoolClassRepositoryContract;
 use App\Domains\Shared\Support\Sort;
 use App\Models\SchoolClass;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 
 final class EloquentSchoolClassRepository implements SchoolClassRepositoryContract
 {
@@ -48,5 +49,17 @@ final class EloquentSchoolClassRepository implements SchoolClassRepositoryContra
     public function delete(SchoolClass $schoolClass): void
     {
         $schoolClass->delete();
+    }
+
+    public function academicYears(): Collection
+    {
+        return SchoolClass::query()->distinct()->orderByDesc('academic_year')->pluck('academic_year');
+    }
+
+    public function count(array $filters = []): int
+    {
+        return SchoolClass::query()
+            ->when($filters['academic_year'] ?? null, fn ($query, $year) => $query->where('academic_year', $year))
+            ->count();
     }
 }

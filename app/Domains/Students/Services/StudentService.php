@@ -3,6 +3,7 @@
 namespace App\Domains\Students\Services;
 
 use App\Domains\Students\Contracts\StudentRepositoryContract;
+use App\Domains\Students\Exceptions\StudentNotDeletableException;
 use App\Domains\Students\Support\MatriculeGenerator;
 use App\Models\Student;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -70,6 +71,10 @@ final class StudentService
 
     public function delete(Student $student): void
     {
+        if ($this->students->hasPayments($student)) {
+            throw StudentNotDeletableException::hasPayments();
+        }
+
         $this->students->delete($student);
     }
 }

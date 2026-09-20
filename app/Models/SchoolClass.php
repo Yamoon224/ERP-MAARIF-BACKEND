@@ -22,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $name
  * @property string $level
  * @property string $academic_year
+ * @property string $monthly_fee scolarite mensuelle de la classe
  * @property string|null $main_teacher_id
  */
 class SchoolClass extends Model
@@ -32,7 +33,15 @@ class SchoolClass extends Model
     protected $table = 'school_classes';
 
     /** @var list<string> */
-    protected $fillable = ['name', 'level', 'academic_year', 'main_teacher_id'];
+    protected $fillable = ['name', 'level', 'academic_year', 'monthly_fee', 'main_teacher_id'];
+
+    /** @return array<string, string> */
+    protected function casts(): array
+    {
+        return [
+            'monthly_fee' => 'decimal:2',
+        ];
+    }
 
     /** @return BelongsTo<User, $this> */
     public function mainTeacher(): BelongsTo
@@ -44,6 +53,12 @@ class SchoolClass extends Model
     public function students(): HasMany
     {
         return $this->hasMany(Student::class);
+    }
+
+    /** @return HasMany<Enrollment, $this> */
+    public function enrollments(): HasMany
+    {
+        return $this->hasMany(Enrollment::class);
     }
 
     /** Matieres enseignees dans cette classe, avec l'enseignant affecte.

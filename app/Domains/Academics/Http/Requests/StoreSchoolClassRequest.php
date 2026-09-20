@@ -19,6 +19,7 @@ class StoreSchoolClassRequest extends FormRequest
             'name' => ['required', 'string', 'max:100'],
             'level' => ['required', 'string', 'max:100'],
             'academic_year' => ['required', 'string', 'regex:/^\d{4}-\d{4}$/'],
+            'monthly_fee' => ['nullable', 'numeric', 'min:0', 'max:999999999'],
             'main_teacher_id' => ['nullable', 'uuid', Rule::exists('users', 'id')],
         ];
     }

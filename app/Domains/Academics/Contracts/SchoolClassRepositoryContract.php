@@ -4,6 +4,7 @@ namespace App\Domains\Academics\Contracts;
 
 use App\Models\SchoolClass;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 
 interface SchoolClassRepositoryContract
 {
@@ -22,4 +23,13 @@ interface SchoolClassRepositoryContract
     public function update(SchoolClass $schoolClass, array $attributes): SchoolClass;
 
     public function delete(SchoolClass $schoolClass): void;
+
+    /** Annees scolaires pour lesquelles au moins une classe existe.
+     *
+     * @return Collection<int, string>
+     */
+    public function academicYears(): Collection;
+
+    /** @param  array<string, mixed>  $filters  `academic_year` */
+    public function count(array $filters = []): int;
 }
