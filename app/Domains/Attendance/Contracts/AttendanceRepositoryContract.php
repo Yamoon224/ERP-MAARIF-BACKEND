@@ -4,6 +4,7 @@ namespace App\Domains\Attendance\Contracts;
 
 use App\Models\AttendanceRecord;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 
 interface AttendanceRepositoryContract
 {
@@ -28,4 +29,24 @@ interface AttendanceRepositoryContract
     public function update(AttendanceRecord $record, array $attributes): AttendanceRecord;
 
     public function delete(AttendanceRecord $record): void;
+
+    /**
+     * Bilan des presences sur la periode : effectifs par statut et eleves les
+     * plus souvent absents.
+     *
+     * @param  array<string, mixed>  $filters  memes filtres que `paginate`
+     * @return array{total: int, present: int, absent: int, late: int, justified_absences: int, unjustified_absences: int, top_absentees: list<array{student: array{id: string, name: string, matricule: string}, absences: int, unjustified: int, lates: int}>}
+     */
+    public function summary(array $filters = [], int $topAbsentees = 5): array;
+
+    /**
+     * Feuille d'appel : les eleves actifs de la classe, chacun avec son
+     * pointage du jour (ou null s'il n'a pas encore ete pointe).
+     *
+     * @return Collection<int, array{student: \App\Models\Student, record: AttendanceRecord|null}>
+     */
+    public function rollCall(string $schoolClassId, string $date): Collection;
+
+    /** @return list<string> */
+    public function classStudentIds(string $schoolClassId): array;
 }

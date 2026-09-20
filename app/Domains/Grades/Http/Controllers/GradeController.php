@@ -6,6 +6,7 @@ use App\Domains\Grades\Http\Requests\StoreGradeRequest;
 use App\Domains\Grades\Http\Requests\UpdateGradeRequest;
 use App\Domains\Grades\Http\Resources\GradeResource;
 use App\Domains\Grades\Services\GradeService;
+use App\Domains\Shared\Support\Period;
 use App\Http\Controllers\Controller;
 use App\Models\Grade;
 use Illuminate\Http\JsonResponse;
@@ -20,9 +21,11 @@ class GradeController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
+        $request->validate([...Period::rules(), 'school_class_id' => ['nullable', 'uuid']]);
+
         return GradeResource::collection(
             $this->grades->list(
-                $request->only('student_id', 'subject_id', 'term_id', 'type', 'sort', 'direction'),
+                $request->only('student_id', 'subject_id', 'term_id', 'academic_year', 'month', 'school_class_id', 'type', 'sort', 'direction'),
                 $request->integer('per_page', 15),
             ),
         );
