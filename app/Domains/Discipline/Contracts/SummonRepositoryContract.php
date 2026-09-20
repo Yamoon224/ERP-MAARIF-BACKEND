@@ -22,4 +22,7 @@ interface SummonRepositoryContract
     public function update(Summon $summon, array $attributes): Summon;
 
     public function delete(Summon $summon): void;
+
+    /** @param  array<string, mixed>  $filters  memes filtres que `paginate` */
+    public function count(array $filters = []): int;
 }

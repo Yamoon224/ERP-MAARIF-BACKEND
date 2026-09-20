@@ -28,6 +28,12 @@ final class SanctionService
         return $this->sanctions->paginate($filters, $perPage);
     }
 
+    /** @param  array<string, mixed>  $filters */
+    public function count(array $filters): int
+    {
+        return $this->sanctions->count($filters);
+    }
+
     public function find(string $id): Sanction
     {
         return $this->sanctions->findOrFail($id);

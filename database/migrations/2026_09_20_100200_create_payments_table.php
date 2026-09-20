@@ -24,7 +24,9 @@ return new class extends Migration
             $table->foreignUuid('enrollment_id')->constrained('enrollments')->restrictOnDelete();
 
             $table->enum('period_type', ['monthly', 'quarterly', 'semiannual', 'annual']);
-            $table->unsignedTinyInteger('months_count');
+            // Mois regles ('2025-10', ...) : conserves sur le paiement lui-meme pour
+            // qu'un recu annule reste lisible une fois ses echeances liberees.
+            $table->json('months');
             $table->decimal('amount', 12, 2);
 
             $table->enum('method', ['cash', 'mobile_money', 'bank_transfer', 'cheque']);

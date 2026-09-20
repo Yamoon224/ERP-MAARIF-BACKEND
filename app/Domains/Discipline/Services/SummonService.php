@@ -28,6 +28,12 @@ final class SummonService
         return $this->summons->paginate($filters, $perPage);
     }
 
+    /** @param  array<string, mixed>  $filters */
+    public function count(array $filters): int
+    {
+        return $this->summons->count($filters);
+    }
+
     public function find(string $id): Summon
     {
         return $this->summons->findOrFail($id);

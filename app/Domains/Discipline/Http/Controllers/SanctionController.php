@@ -6,6 +6,7 @@ use App\Domains\Discipline\Http\Requests\StoreSanctionRequest;
 use App\Domains\Discipline\Http\Requests\UpdateSanctionRequest;
 use App\Domains\Discipline\Http\Resources\SanctionResource;
 use App\Domains\Discipline\Services\SanctionService;
+use App\Domains\Shared\Support\Period;
 use App\Http\Controllers\Controller;
 use App\Models\Sanction;
 use App\Models\Student;
@@ -20,8 +21,10 @@ class SanctionController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
+        $request->validate([...Period::rules(), 'school_class_id' => ['nullable', 'uuid']]);
+
         return SanctionResource::collection(
-            $this->sanctions->list($request->only('student_id', 'type', 'sort', 'direction'), $request->integer('per_page', 15)),
+            $this->sanctions->list($request->only('student_id', 'type', 'school_class_id', 'academic_year', 'term_id', 'month', 'sort', 'direction'), $request->integer('per_page', 15)),
         );
     }
 
@@ -52,9 +55,11 @@ class SanctionController extends Controller
     /** Sanctions concernant son enfant, pour le portail parent. */
     public function mine(Request $request): AnonymousResourceCollection
     {
+        $request->validate(Period::rules());
+
         /** @var Student $student */
         $student = $request->user();
 
-        return SanctionResource::collection($this->sanctions->list(['student_id' => $student->id], $request->integer('per_page', 15)));
+        return SanctionResource::collection($this->sanctions->list(['student_id' => $student->id, ...$request->only('academic_year', 'term_id', 'month')], $request->integer('per_page', 15)));
     }
 }

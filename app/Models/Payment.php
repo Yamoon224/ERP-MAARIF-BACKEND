@@ -20,7 +20,7 @@ use Illuminate\Support\Carbon;
  * @property string $receipt_number
  * @property string $enrollment_id
  * @property PaymentPeriod $period_type
- * @property int $months_count
+ * @property list<string> $months mois regles, au format `YYYY-MM`
  * @property string $amount
  * @property PaymentMethod $method
  * @property Carbon $paid_at
@@ -33,7 +33,7 @@ class Payment extends Model
 
     /** @var list<string> */
     protected $fillable = [
-        'receipt_number', 'enrollment_id', 'period_type', 'months_count', 'amount', 'method',
+        'receipt_number', 'enrollment_id', 'period_type', 'months', 'amount', 'method',
         'reference', 'paid_at', 'note', 'received_by',
         'cancelled_at', 'cancelled_by', 'cancellation_reason',
     ];
@@ -45,7 +45,7 @@ class Payment extends Model
             'period_type' => PaymentPeriod::class,
             'method' => PaymentMethod::class,
             'amount' => 'decimal:2',
-            'months_count' => 'integer',
+            'months' => 'array',
             'paid_at' => 'date:Y-m-d',
             'cancelled_at' => 'datetime',
         ];

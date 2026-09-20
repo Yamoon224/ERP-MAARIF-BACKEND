@@ -22,4 +22,7 @@ interface SanctionRepositoryContract
     public function update(Sanction $sanction, array $attributes): Sanction;
 
     public function delete(Sanction $sanction): void;
+
+    /** @param  array<string, mixed>  $filters  memes filtres que `paginate` */
+    public function count(array $filters = []): int;
 }
