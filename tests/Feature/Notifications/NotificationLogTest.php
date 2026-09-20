@@ -2,14 +2,18 @@
 
 namespace Tests\Feature\Notifications;
 
+use App\Domains\Notifications\Contracts\NotificationSenderContract;
+use App\Domains\Notifications\DTOs\NotificationMessage;
 use App\Domains\Notifications\Enums\NotificationChannel;
 use App\Domains\Notifications\Enums\NotificationStatus;
 use App\Domains\Notifications\Enums\NotificationType;
+use App\Domains\Notifications\Senders\ArrayNotificationSender;
 use App\Models\AdmissionApplication;
 use App\Models\NotificationLog;
 use App\Models\Student;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
+use RuntimeException;
 use Tests\TestCase;
 
 class NotificationLogTest extends TestCase
@@ -105,6 +109,140 @@ class NotificationLogTest extends TestCase
             ->assertJsonPath('data.total', 3)
             ->assertJsonPath('data.by_status.sent', 2)
             ->assertJsonPath('data.by_status.failed', 1);
+    }
+
+    private function sender(): ArrayNotificationSender
+    {
+        /** @var ArrayNotificationSender $sender */
+        $sender = $this->app->make(NotificationSenderContract::class);
+
+        return $sender;
+    }
+
+    #[Test]
+    public function un_message_en_echec_est_renvoye_sur_la_meme_ligne_du_journal(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $student = Student::factory()->create(['guardian_email' => 'tuteur@example.test']);
+        $log = $this->log([
+            'student_id' => $student->id,
+            'recipient' => 'tuteur@example.test',
+            'body' => 'Convocation pour Awa',
+            'status' => NotificationStatus::Failed,
+            'error' => 'Operateur SMS indisponible',
+        ]);
+
+        $this->actingAs($admin)->postJson("/api/notification-logs/{$log->id}/resend")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'sent')
+            ->assertJsonPath('data.attempts', 2)
+            ->assertJsonPath('data.error', null);
+
+        $this->assertCount(1, $this->sender()->sent());
+        $this->assertSame('Convocation pour Awa', $this->sender()->sent()[0]->body);
+        $this->assertDatabaseCount('notification_logs', 1);
+        $this->assertNotNull($log->refresh()->sent_at);
+    }
+
+    #[Test]
+    public function un_renvoi_qui_echoue_de_nouveau_reste_en_echec_avec_la_nouvelle_raison(): void
+    {
+        $this->app->instance(NotificationSenderContract::class, new class implements NotificationSenderContract
+        {
+            public function send(NotificationMessage $message): bool
+            {
+                throw new RuntimeException('Toujours indisponible');
+            }
+        });
+        $admin = $this->userWithRole('admin');
+        $log = $this->log(['student_id' => Student::factory()->create()->id, 'status' => NotificationStatus::Failed, 'error' => 'Premiere panne']);
+
+        $this->actingAs($admin)->postJson("/api/notification-logs/{$log->id}/resend")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'failed')
+            ->assertJsonPath('data.attempts', 2)
+            ->assertJsonPath('data.error', 'Toujours indisponible');
+
+        $this->actingAs($admin)->postJson("/api/notification-logs/{$log->id}/resend")->assertOk()->assertJsonPath('data.attempts', 3);
+    }
+
+    #[Test]
+    public function le_renvoi_utilise_le_contact_actuel_du_tuteur_apres_correction(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $student = Student::factory()->create(['guardian_email' => null, 'guardian_phone' => '+224111111111']);
+        $log = $this->log([
+            'student_id' => $student->id,
+            'channel' => NotificationChannel::Sms,
+            'recipient' => '+224111111111',
+            'status' => NotificationStatus::Failed,
+        ]);
+
+        // Le numero etait faux : on le corrige, puis on renvoie.
+        $student->update(['guardian_phone' => '+224622222222']);
+
+        $this->actingAs($admin)->postJson("/api/notification-logs/{$log->id}/resend")
+            ->assertOk()
+            ->assertJsonPath('data.recipient', '+224622222222')
+            ->assertJsonPath('data.channel', 'sms');
+        $this->assertSame('+224622222222', $this->sender()->sent()[0]->recipient);
+
+        // Et si une adresse e-mail a ete ajoutee entre-temps, elle prend le pas sur le SMS.
+        $log->refresh()->update(['status' => NotificationStatus::Failed]);
+        $student->update(['guardian_email' => 'nouveau@example.test']);
+
+        $this->actingAs($admin)->postJson("/api/notification-logs/{$log->id}/resend")
+            ->assertJsonPath('data.recipient', 'nouveau@example.test')
+            ->assertJsonPath('data.channel', 'email');
+    }
+
+    #[Test]
+    public function le_renvoi_d_une_decision_d_admission_renseigne_la_date_de_notification_du_dossier(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $application = AdmissionApplication::factory()->create(['notified_at' => null]);
+        $log = $this->log([
+            'admission_application_id' => $application->id,
+            'type' => NotificationType::Admission,
+            'status' => NotificationStatus::Failed,
+        ]);
+
+        $this->actingAs($admin)->postJson("/api/notification-logs/{$log->id}/resend")->assertOk()->assertJsonPath('data.status', 'sent');
+
+        $this->assertNotNull($application->refresh()->notified_at);
+    }
+
+    #[Test]
+    public function seul_un_message_en_echec_peut_etre_renvoye(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $student = Student::factory()->create();
+
+        foreach ([NotificationStatus::Sent, NotificationStatus::Pending] as $status) {
+            $log = $this->log(['student_id' => $student->id, 'status' => $status]);
+
+            $this->actingAs($admin)->postJson("/api/notification-logs/{$log->id}/resend")
+                ->assertStatus(409)
+                ->assertJsonPath('error_code', 'notification_not_failed');
+        }
+
+        $this->assertCount(0, $this->sender()->sent());
+        $this->actingAs($admin)->postJson('/api/notification-logs/00000000-0000-0000-0000-000000000000/resend')->assertNotFound();
+    }
+
+    #[Test]
+    public function seul_le_role_autorise_renvoie_un_message(): void
+    {
+        $log = $this->log(['student_id' => Student::factory()->create()->id, 'status' => NotificationStatus::Failed]);
+        $teacher = $this->userWithRole('teacher');
+        $accountant = $this->userWithRole('accountant');
+        $parent = $this->studentWithPassword();
+
+        foreach ([$teacher, $accountant, $parent] as $account) {
+            $this->actingAs($account)->postJson("/api/notification-logs/{$log->id}/resend")->assertForbidden();
+        }
+
+        $this->assertSame(NotificationStatus::Failed, $log->refresh()->status);
     }
 
     #[Test]
