@@ -40,6 +40,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'attendance.manage' => 'Saisir les presences et absences.',
         'discipline.manage' => 'Creer des convocations et des sanctions.',
         'notifications.view' => 'Consulter le journal des notifications envoyees aux tuteurs.',
+        'notifications.manage' => 'Renvoyer un message en echec depuis le journal des notifications.',
         'accounting.view' => 'Consulter les paiements de scolarite, les releves et les impayes.',
         'accounting.manage' => 'Encaisser et annuler des paiements, fixer les frais de scolarite des classes.',
         'admissions.view' => "Consulter les candidatures d'admission.",

@@ -53,7 +53,8 @@ class DemoSeederTest extends TestCase
         $this->assertGreaterThan(0, NotificationLog::where('type', NotificationType::Summon)->where('status', NotificationStatus::Sent)->count());
         $this->assertGreaterThan(0, NotificationLog::where('type', NotificationType::Sanction)->count());
         $this->assertSame(1, NotificationLog::where('status', NotificationStatus::Failed)->count());
-        $this->assertSame(4, NotificationLog::where('type', NotificationType::Admission)->count());
+        // Admis, liste d'attente, refus, puis admis + inscrit pour le candidat inscrit : cinq messages.
+        $this->assertSame(5, NotificationLog::where('type', NotificationType::Admission)->count());
 
         $admin = User::where('email', 'admin@maarif.test')->firstOrFail();
         $this->actingAs($admin)->getJson('/api/notification-logs/summary')->assertOk()->assertJsonPath('data.by_status.failed', 1);

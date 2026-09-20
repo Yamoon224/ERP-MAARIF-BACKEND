@@ -28,7 +28,7 @@ class NotificationLog extends Model
 
     /** @var list<string> */
     protected $fillable = [
-        'student_id', 'admission_application_id', 'channel', 'type', 'recipient', 'subject', 'body', 'status', 'error', 'sent_at',
+        'student_id', 'admission_application_id', 'channel', 'type', 'recipient', 'subject', 'body', 'status', 'attempts', 'error', 'sent_at',
     ];
 
     /** @return array<string, string> */

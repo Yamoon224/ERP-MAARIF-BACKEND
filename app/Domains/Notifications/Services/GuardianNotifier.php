@@ -8,6 +8,7 @@ use App\Domains\Notifications\DTOs\NotificationMessage;
 use App\Domains\Notifications\Enums\NotificationChannel;
 use App\Domains\Notifications\Enums\NotificationStatus;
 use App\Domains\Notifications\Enums\NotificationType;
+use App\Domains\Notifications\Exceptions\NotificationException;
 use App\Models\AdmissionApplication;
 use App\Models\NotificationLog;
 use App\Models\Sanction;
@@ -126,12 +127,54 @@ final class GuardianNotifier
             'status' => NotificationStatus::Pending,
         ]);
 
+        return $this->attempt($log);
+    }
+
+    /**
+     * Renvoie un message en echec, sur la meme ligne du journal (le compteur de
+     * tentatives augmente). Le contact est relu sur l'eleve ou le dossier
+     * plutot que sur le message : c'est le cas courant d'un numero corrige
+     * apres l'echec, qu'un renvoi a l'ancienne adresse ferait echouer encore.
+     */
+    public function resend(NotificationLog $log): NotificationLog
+    {
+        if ($log->status !== NotificationStatus::Failed) {
+            throw NotificationException::notResendable();
+        }
+
+        $log->loadMissing(['student', 'admissionApplication']);
+
+        $owner = $log->student ?? $log->admissionApplication;
+        if ($owner !== null) {
+            $channel = $owner->guardian_email !== null ? NotificationChannel::Email : NotificationChannel::Sms;
+
+            $log->fill([
+                'channel' => $channel,
+                'recipient' => $channel === NotificationChannel::Email ? $owner->guardian_email : $owner->guardian_phone,
+            ]);
+        }
+
+        $log->attempts++;
+
+        $log = $this->attempt($log);
+
+        // Une decision d'admission enfin delivree : le dossier peut le dire.
+        if ($log->status === NotificationStatus::Sent && $log->admissionApplication?->notified_at === null) {
+            $log->admissionApplication?->update(['notified_at' => Carbon::now()]);
+        }
+
+        return $log;
+    }
+
+    /** Envoie le message du journal et consigne le resultat, sans jamais laisser une erreur d'envoi remonter. */
+    private function attempt(NotificationLog $log): NotificationLog
+    {
         try {
             $accepted = $this->sender->send(new NotificationMessage(
-                channel: $channel,
-                recipient: $recipient,
-                body: $body,
-                subject: $subject,
+                channel: $log->channel,
+                recipient: $log->recipient,
+                body: $log->body,
+                subject: $log->subject,
             ));
 
             $log->update([
@@ -142,6 +185,7 @@ final class GuardianNotifier
         } catch (Throwable $exception) {
             $log->update([
                 'status' => NotificationStatus::Failed,
+                'sent_at' => null,
                 'error' => mb_substr($exception->getMessage(), 0, 250),
             ]);
         }
