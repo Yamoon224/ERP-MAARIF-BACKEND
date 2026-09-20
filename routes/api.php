@@ -120,6 +120,7 @@ Route::middleware(['auth:sanctum', 'account_type:staff'])->group(function (): vo
     Route::middleware('permission:results.manage')->group(function (): void {
         Route::put('/enrollments/{enrollment}/decision', [ResultsController::class, 'saveDecision']);
         Route::post('/classes/{schoolClass}/decisions/validate', [ResultsController::class, 'validateDecisions']);
+        Route::post('/classes/{schoolClass}/promotions', [ResultsController::class, 'promote']);
     });
 
     Route::middleware('permission:admissions.view')->group(function (): void {

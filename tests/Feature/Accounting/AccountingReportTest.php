@@ -80,7 +80,7 @@ class AccountingReportTest extends TestCase
         $accountant = $this->userWithRole('accountant');
         $student = Student::factory()->create(['school_class_id' => $class->id]);
 
-        // Paye en septembre 2025... pour l'annee qui demarre en octobre 2026 : ici, "aujourd'hui" est janvier 2026.
+        // Regle en decembre 2025 pour l'annee 2026-2027, qui ne demarre qu'en octobre 2026 ("aujourd'hui" : 15 janvier 2026).
         $this->actingAs($accountant)->postJson('/api/payments', [
             'enrollment_id' => Enrollment::where('student_id', $student->id)->value('id'),
             'period' => 'annual',

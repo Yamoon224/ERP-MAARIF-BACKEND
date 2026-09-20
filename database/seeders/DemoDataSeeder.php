@@ -3,13 +3,16 @@
 namespace Database\Seeders;
 
 use App\Domains\Accounting\Enums\PaymentMethod;
+use App\Domains\Admissions\Enums\AdmissionStatus;
+use App\Domains\Admissions\Services\AdmissionService;
 use App\Domains\Accounting\Enums\PaymentPeriod;
 use App\Domains\Accounting\Services\PaymentService;
 use App\Domains\Attendance\Enums\AttendanceStatus;
 use App\Domains\Discipline\Enums\SanctionType;
 use App\Domains\Discipline\Enums\SummonStatus;
 use App\Domains\Grades\Enums\GradeType;
-use App\Domains\Students\Services\EnrollmentService;
+use App\Domains\Results\Services\PromotionService;
+use App\Domains\Results\Services\ResultsService;
 use App\Models\AttendanceRecord;
 use App\Models\Enrollment;
 use App\Models\Grade;
@@ -31,7 +34,8 @@ use Illuminate\Support\Facades\Hash;
  * Deux annees scolaires (la precedente, terminee, et l'actuelle) calculees a
  * partir de la date du jour, pour que les filtres annee / trimestre / mois et
  * la comptabilite aient de quoi montrer. Les eleves de l'annee precedente
- * sont reinscrits pour l'annee actuelle.
+ * recoivent une decision de passage puis sont reinscrits pour l'annee
+ * actuelle, et des candidatures d'admission sont deposees a chaque stade.
  */
 class DemoDataSeeder extends Seeder
 {
@@ -59,13 +63,52 @@ class DemoDataSeeder extends Seeder
         $this->recordActivity($students, $previousYear['terms'], $subjects, $teacher, $admin);
         $this->recordPayments($students, $previousYear['label'], $accountant);
 
-        // Passage en classe superieure : nouvelle inscription, ancienne conservee.
-        $enrollments = app(EnrollmentService::class);
-        $students->each(fn (Student $student) => $enrollments->enroll($student, $currentClass5->id));
+        // Fin d'annee : decisions de passage d'apres les moyennes annuelles, puis
+        // reinscription (admis en 5eme, redoublants en 6eme, ancienne inscription conservee).
+        app(ResultsService::class)->validateClassDecisions($previousClass, $admin->id);
+        app(PromotionService::class)->promoteClass($previousClass, $currentClass5->id, $currentClass6->id);
 
         $newcomers = Student::factory()->count(5)->create(['school_class_id' => $currentClass6->id]);
         $this->recordActivity($students->concat($newcomers), $currentYear['terms'], $subjects, $teacher, $admin);
         $this->recordPayments($students->concat($newcomers), $currentYear['label'], $accountant);
+
+        $this->createAdmissions($currentYear['label'], $currentClass6, $admin);
+    }
+
+    /**
+     * Candidatures a tous les stades du parcours : deux deposees, une en etude,
+     * une admise, une en liste d'attente, une refusee et une deja inscrite. Elles
+     * passent par le service, comme en production, donc les tuteurs sont
+     * notifies (voir le journal des notifications).
+     */
+    private function createAdmissions(string $academicYear, SchoolClass $class, User $admin): void
+    {
+        $admissions = app(AdmissionService::class);
+
+        $submit = fn (string $first, string $last, string $gender) => $admissions->submit([
+            'academic_year' => $academicYear,
+            'level' => '6eme',
+            'first_name' => $first,
+            'last_name' => $last,
+            'gender' => $gender,
+            'birth_date' => fake()->dateTimeBetween('-12 years', '-10 years')->format('Y-m-d'),
+            'previous_school' => 'Ecole primaire '.fake()->lastName(),
+            'guardian_name' => fake()->name(),
+            'guardian_phone' => '+224'.fake()->numerify('6########'),
+            'guardian_email' => fake()->safeEmail(),
+            'address' => 'Conakry',
+        ]);
+
+        $submit('Mariama', 'Barry', 'F');
+        $submit('Ibrahima', 'Sow', 'M');
+
+        $admissions->changeStatus($submit('Fatoumata', 'Keita', 'F'), AdmissionStatus::UnderReview, null, $admin->id);
+        $admissions->changeStatus($submit('Ousmane', 'Diallo', 'M'), AdmissionStatus::Accepted, 'Dossier complet', $admin->id);
+        $admissions->changeStatus($submit('Aissatou', 'Camara', 'F'), AdmissionStatus::Waitlisted, 'Classe complete pour le moment', $admin->id);
+        $admissions->changeStatus($submit('Mamadou', 'Bangoura', 'M'), AdmissionStatus::Rejected, 'Niveau insuffisant a l\'entretien', $admin->id);
+
+        $enrolled = $admissions->changeStatus($submit('Kadiatou', 'Toure', 'F'), AdmissionStatus::Accepted, null, $admin->id);
+        $admissions->enroll($enrolled, $class->id);
     }
 
     /** @return array{User, User, User} */

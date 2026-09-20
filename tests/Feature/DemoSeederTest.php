@@ -2,8 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Domains\Admissions\Enums\AdmissionStatus;
+use App\Domains\Results\Enums\PromotionDecisionType;
+use App\Models\AdmissionApplication;
 use App\Models\Enrollment;
 use App\Models\Payment;
+use App\Models\PromotionDecision;
 use App\Models\Term;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
@@ -25,9 +29,22 @@ class DemoSeederTest extends TestCase
         $this->assertSame(1, Term::where('is_current', true)->count());
         $this->assertTrue(User::where('email', 'comptable@maarif.test')->firstOrFail()->hasRole('accountant'));
 
-        // 10 eleves inscrits deux annees de suite + 5 nouveaux la derniere.
-        $this->assertSame(25, Enrollment::count());
+        // 10 eleves inscrits deux annees de suite + 5 nouveaux la derniere + 1 candidat admis puis inscrit.
+        $this->assertSame(26, Enrollment::count());
         $this->assertGreaterThan(0, Payment::count());
+
+        // Chaque eleve de l'annee passee a une decision, et tous sont reinscrits (admis ou redoublants).
+        $this->assertSame(10, PromotionDecision::count());
+        $this->assertSame(0, PromotionDecision::where('decision', PromotionDecisionType::Excluded)->count());
+        $this->assertSame(16, Enrollment::where('academic_year', Term::where('is_current', true)->value('academic_year'))->count());
+
+        // Sept candidatures, une par etape du parcours, dont une deja inscrite.
+        $this->assertSame(7, AdmissionApplication::count());
+        $this->assertSame(1, AdmissionApplication::where('status', AdmissionStatus::Enrolled)->whereNotNull('student_id')->count());
+        $this->assertSame(
+            1,
+            AdmissionApplication::where('status', AdmissionStatus::Rejected)->whereNotNull('decision_note')->count(),
+        );
 
         $admin = User::where('email', 'admin@maarif.test')->firstOrFail();
         $this->actingAs($admin)->getJson('/api/dashboard')->assertOk();

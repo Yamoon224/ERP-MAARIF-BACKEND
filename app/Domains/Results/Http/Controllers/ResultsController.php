@@ -3,7 +3,9 @@
 namespace App\Domains\Results\Http\Controllers;
 
 use App\Domains\Results\Http\Requests\ClassResultsRequest;
+use App\Domains\Results\Http\Requests\PromoteClassRequest;
 use App\Domains\Results\Http\Requests\SaveDecisionRequest;
+use App\Domains\Results\Services\PromotionService;
 use App\Domains\Results\Services\ResultsService;
 use App\Domains\Shared\Support\Period;
 use App\Http\Controllers\Controller;
@@ -19,7 +21,10 @@ use Illuminate\Http\Request;
  */
 class ResultsController extends Controller
 {
-    public function __construct(private readonly ResultsService $results) {}
+    public function __construct(
+        private readonly ResultsService $results,
+        private readonly PromotionService $promotions,
+    ) {}
 
     /** Classement d'une classe sur une periode. */
     public function forClass(ClassResultsRequest $request): JsonResponse
@@ -73,6 +78,22 @@ class ResultsController extends Controller
         $count = $this->results->validateClassDecisions($schoolClass, $request->user()->id);
 
         return response()->json(['data' => ['validated' => $count]]);
+    }
+
+    /**
+     * Reinscrit les eleves de la classe pour l'annee suivante d'apres leurs
+     * decisions enregistrees : admis dans la classe superieure, redoublants
+     * dans la classe qu'ils repetent, exclus laisses de cote.
+     */
+    public function promote(PromoteClassRequest $request, SchoolClass $schoolClass): JsonResponse
+    {
+        $summary = $this->promotions->promoteClass(
+            $schoolClass,
+            $request->validated('admitted_class_id'),
+            $request->validated('repeat_class_id'),
+        );
+
+        return response()->json(['data' => $summary]);
     }
 
     private function respondForStudent(Request $request, Student $student): JsonResponse
