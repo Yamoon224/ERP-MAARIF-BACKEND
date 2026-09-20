@@ -18,7 +18,7 @@ final class AdmissionException extends DomainException
     public static function notAccepted(): self
     {
         return new self(
-            "Seule une candidature admise peut être transformée en inscription.",
+            'Seule une candidature admise peut être transformée en inscription.',
             'admission_not_accepted',
         );
     }

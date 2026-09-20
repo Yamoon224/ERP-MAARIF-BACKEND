@@ -13,6 +13,7 @@ use App\Domains\Results\Support\Mention;
 use App\Domains\Results\Support\ResultPeriod;
 use App\Domains\Students\Contracts\EnrollmentRepositoryContract;
 use App\Models\Enrollment;
+use App\Models\Grade;
 use App\Models\PromotionDecision;
 use App\Models\SchoolClass;
 use App\Models\Student;
@@ -236,7 +237,7 @@ final class ResultsService
 
     /**
      * @param  Collection<int, Enrollment>  $enrollments
-     * @param  Collection<int, \App\Models\Grade>  $grades
+     * @param  Collection<int, Grade>  $grades
      * @return array{rows: Collection<int, array<string, mixed>>, stats: array<string, mixed>}
      */
     private function compute(Collection $enrollments, Collection $grades, ResultPeriod $period): array
