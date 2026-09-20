@@ -28,7 +28,7 @@ class NotificationLog extends Model
 
     /** @var list<string> */
     protected $fillable = [
-        'student_id', 'channel', 'type', 'recipient', 'subject', 'body', 'status', 'error', 'sent_at',
+        'student_id', 'admission_application_id', 'channel', 'type', 'recipient', 'subject', 'body', 'status', 'error', 'sent_at',
     ];
 
     /** @return array<string, string> */
@@ -46,5 +46,11 @@ class NotificationLog extends Model
     public function student(): BelongsTo
     {
         return $this->belongsTo(Student::class);
+    }
+
+    /** @return BelongsTo<AdmissionApplication, $this> */
+    public function admissionApplication(): BelongsTo
+    {
+        return $this->belongsTo(AdmissionApplication::class);
     }
 }

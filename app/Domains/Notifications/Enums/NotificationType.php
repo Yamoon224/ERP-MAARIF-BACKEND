@@ -10,6 +10,7 @@ enum NotificationType: string
     case Summon = 'convocation';
     case Sanction = 'sanction';
     case BulletinReminder = 'bulletin';
+    case Admission = 'admission';
 
     public function label(): string
     {
@@ -17,6 +18,7 @@ enum NotificationType: string
             self::Summon => 'Convocation',
             self::Sanction => 'Sanction',
             self::BulletinReminder => 'Rappel de bulletin',
+            self::Admission => 'Admission',
         };
     }
 }

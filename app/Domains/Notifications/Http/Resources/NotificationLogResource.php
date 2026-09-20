@@ -14,10 +14,15 @@ class NotificationLogResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'student' => $this->whenLoaded('student', fn () => [
+            'student' => $this->whenLoaded('student', fn () => $this->student ? [
                 'id' => $this->student->id,
                 'name' => $this->student->fullName(),
-            ]),
+            ] : null),
+            'admission' => $this->whenLoaded('admissionApplication', fn () => $this->admissionApplication ? [
+                'id' => $this->admissionApplication->id,
+                'name' => $this->admissionApplication->fullName(),
+                'reference' => $this->admissionApplication->reference,
+            ] : null),
             'channel' => $this->channel->value,
             'type' => $this->type->value,
             'recipient' => $this->recipient,

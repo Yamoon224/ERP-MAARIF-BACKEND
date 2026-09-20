@@ -26,6 +26,16 @@ final class ResultsException extends DomainException
         );
     }
 
+    public static function invalidPromotionTarget(string $sourceYear, string $targetYear): self
+    {
+        return new self(
+            "Les classes d'accueil doivent appartenir à une année postérieure à {$sourceYear} (et à la même année entre elles) : reçu {$targetYear}.",
+            'promotion_invalid_target',
+            422,
+            ['source_year' => $sourceYear, 'target_year' => $targetYear],
+        );
+    }
+
     public static function noAcademicYear(): self
     {
         return new self(

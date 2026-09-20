@@ -61,6 +61,18 @@ final class Period
         return null;
     }
 
+    /**
+     * Vrai quand seule une annee scolaire est demandee, sans trimestre ni
+     * mois : certaines mesures (l'encaissement d'une annee) se rattachent
+     * alors a l'annee elle-meme plutot qu'a un intervalle de dates.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    public static function isWholeYear(array $filters): bool
+    {
+        return ! empty($filters['academic_year']) && empty($filters['term_id']) && empty($filters['month']);
+    }
+
     public static function forTerm(Term $term): self
     {
         return new self(

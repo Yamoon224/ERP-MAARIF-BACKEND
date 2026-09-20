@@ -7,6 +7,8 @@ use App\Domains\Admissions\Contracts\AdmissionRepositoryContract;
 use App\Domains\Admissions\Enums\AdmissionStatus;
 use App\Domains\Admissions\Exceptions\AdmissionException;
 use App\Domains\Admissions\Support\AdmissionReferenceGenerator;
+use App\Domains\Notifications\Enums\NotificationStatus;
+use App\Domains\Notifications\Services\GuardianNotifier;
 use App\Domains\Students\Services\StudentService;
 use App\Models\AdmissionApplication;
 use App\Models\Student;
@@ -26,6 +28,7 @@ final class AdmissionService
         private readonly AdmissionRepositoryContract $applications,
         private readonly SchoolClassRepositoryContract $classes,
         private readonly StudentService $students,
+        private readonly GuardianNotifier $notifier,
     ) {}
 
     /**
@@ -85,12 +88,18 @@ final class AdmissionService
     {
         $this->assertNotEnrolled($application);
 
-        return $this->applications->update($application, [
+        $changed = $application->status !== $status;
+
+        $updated = $this->applications->update($application, [
             'status' => $status,
             'decision_note' => $note,
             'decided_at' => now(),
             'decided_by' => $userId,
         ]);
+
+        // Le tuteur n'est prevenu que d'un vrai changement : corriger la note
+        // d'une decision deja communiquee ne doit pas lui renvoyer le meme message.
+        return $changed ? $this->notifyGuardian($updated) : $updated;
     }
 
     /**
@@ -114,7 +123,7 @@ final class AdmissionService
             throw AdmissionException::classYearMismatch($application->academic_year, $class->academic_year);
         }
 
-        return DB::transaction(function () use ($application, $class): array {
+        $result = DB::transaction(function () use ($application, $class): array {
             $enrolled = $this->students->enroll([
                 'first_name' => $application->first_name,
                 'last_name' => $application->last_name,
@@ -139,6 +148,11 @@ final class AdmissionService
                 'initial_password' => $enrolled['initial_password'],
             ];
         });
+
+        // Apres la transaction : un envoi ne doit jamais retenir ni defaire l'inscription.
+        $result['application'] = $this->notifyGuardian($result['application']);
+
+        return $result;
     }
 
     public function delete(AdmissionApplication $application): void
@@ -146,6 +160,21 @@ final class AdmissionService
         $this->assertNotEnrolled($application);
 
         $this->applications->delete($application);
+    }
+
+    /**
+     * Previent le tuteur de la decision courante et note sur le dossier que
+     * c'est fait, si le prestataire a bien accepte le message.
+     */
+    private function notifyGuardian(AdmissionApplication $application): AdmissionApplication
+    {
+        $log = $this->notifier->notifyAdmission($application);
+
+        if ($log?->status !== NotificationStatus::Sent) {
+            return $application;
+        }
+
+        return $this->applications->update($application, ['notified_at' => now()]);
     }
 
     private function assertNotEnrolled(AdmissionApplication $application): void

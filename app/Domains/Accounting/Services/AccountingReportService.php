@@ -25,18 +25,30 @@ final class AccountingReportService
 
         $expected = $this->reports->expected($period, $scope);
 
+        // Sur une annee scolaire entiere, l'encaissement est celui des
+        // inscriptions de l'annee : une famille qui regle en septembre la
+        // scolarite d'une annee qui commence en octobre l'a bien payee pour
+        // cette annee. Pour un trimestre ou un mois, on mesure au contraire la
+        // caisse : ce qui est entre a ces dates.
+        $collectedPeriod = $period;
+        $collectedScope = $scope;
+        if (Period::isWholeYear($filters)) {
+            $collectedPeriod = null;
+            $collectedScope['enrollment_year'] = $filters['academic_year'];
+        }
+
         return [
             'period' => $period?->toArray(),
-            'collected' => $this->reports->collected($period, $scope),
+            'collected' => $this->reports->collected($collectedPeriod, $collectedScope),
             'by_period_type' => $this->bucketed(
-                $this->reports->collectedBy('period_type', $period, $scope),
+                $this->reports->collectedBy('period_type', $collectedPeriod, $collectedScope),
                 PaymentPeriod::cases(),
             ),
             'by_method' => $this->bucketed(
-                $this->reports->collectedBy('method', $period, $scope),
+                $this->reports->collectedBy('method', $collectedPeriod, $collectedScope),
                 PaymentMethod::cases(),
             ),
-            'by_month' => $this->byMonth($period, $scope),
+            'by_month' => $this->byMonth($period, $collectedPeriod, $collectedScope),
             'expected' => [
                 ...$expected,
                 'rate' => $expected['total'] > 0 ? round($expected['settled'] / $expected['total'] * 100, 1) : null,
@@ -79,18 +91,21 @@ final class AccountingReportService
     /**
      * Encaissement mois par mois. Sur une periode connue, chaque mois y figure
      * (a zero s'il n'y a rien eu) pour que l'histogramme ait toujours la meme
-     * echelle.
+     * echelle ; un paiement anticipe (avant le premier mois de l'annee) ajoute
+     * son propre mois a gauche.
      *
+     * @param  Period|null  $displayed  periode dont les mois sont affiches
+     * @param  Period|null  $collectedPeriod  periode qui borne les paiements comptes
      * @param  array<string, mixed>  $scope
      * @return list<array{month: string, total: float}>
      */
-    private function byMonth(?Period $period, array $scope): array
+    private function byMonth(?Period $displayed, ?Period $collectedPeriod, array $scope): array
     {
-        $collected = $this->reports->collectedByMonth($period, $scope);
+        $collected = $this->reports->collectedByMonth($collectedPeriod, $scope);
 
-        if ($period !== null) {
-            $month = $period->from->startOfMonth();
-            $last = $period->to->startOfMonth();
+        if ($displayed !== null) {
+            $month = $displayed->from->startOfMonth();
+            $last = $displayed->to->startOfMonth();
 
             for (; $month <= $last; $month = $month->addMonth()) {
                 $collected[$month->format('Y-m')] ??= 0.0;

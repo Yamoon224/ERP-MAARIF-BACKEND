@@ -101,6 +101,10 @@ final class EloquentAccountingReportRepository implements AccountingReportReposi
             ->when($filters['school_class_id'] ?? null, fn ($q, $id) => $q->whereHas(
                 'enrollment',
                 fn ($enrollment) => $enrollment->where('school_class_id', $id),
+            ))
+            ->when($filters['enrollment_year'] ?? null, fn ($q, $year) => $q->whereHas(
+                'enrollment',
+                fn ($enrollment) => $enrollment->where('academic_year', $year),
             ));
 
         return $period?->constrain($query, 'payments.paid_at') ?? $query;

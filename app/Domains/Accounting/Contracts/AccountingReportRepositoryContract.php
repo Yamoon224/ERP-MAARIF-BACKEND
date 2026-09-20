@@ -20,7 +20,7 @@ interface AccountingReportRepositoryContract
     /**
      * Encaissements valides (hors annules) sur la periode.
      *
-     * @param  array<string, mixed>  $filters  school_class_id
+     * @param  array<string, mixed>  $filters  school_class_id ; enrollment_year (paiements des inscriptions de cette annee)
      * @return array{total: float, count: int}
      */
     public function collected(?Period $period, array $filters = []): array;

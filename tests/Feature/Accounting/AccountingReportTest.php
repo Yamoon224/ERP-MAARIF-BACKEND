@@ -74,6 +74,35 @@ class AccountingReportTest extends TestCase
     }
 
     #[Test]
+    public function une_annee_scolaire_compte_aussi_les_paiements_faits_avant_la_rentree(): void
+    {
+        $class = $this->schoolYear('2026-2027')['class'];
+        $accountant = $this->userWithRole('accountant');
+        $student = Student::factory()->create(['school_class_id' => $class->id]);
+
+        // Paye en septembre 2025... pour l'annee qui demarre en octobre 2026 : ici, "aujourd'hui" est janvier 2026.
+        $this->actingAs($accountant)->postJson('/api/payments', [
+            'enrollment_id' => Enrollment::where('student_id', $student->id)->value('id'),
+            'period' => 'annual',
+            'method' => 'bank_transfer',
+            'paid_at' => '2025-12-20',
+        ])->assertCreated();
+
+        // L'annee entiere : le paiement est compte, meme s'il precede le premier trimestre.
+        $this->actingAs($accountant)->getJson('/api/accounting/summary?academic_year=2026-2027')
+            ->assertJsonPath('data.collected.total', 450000)
+            ->assertJsonPath('data.collected.count', 1);
+        $this->actingAs($accountant)->getJson('/api/payments?academic_year=2026-2027')
+            ->assertJsonCount(1, 'data');
+
+        // Un trimestre ou un mois : c'est la caisse, donc la date du paiement.
+        $this->actingAs($accountant)->getJson('/api/accounting/summary?month=2026-10')
+            ->assertJsonPath('data.collected.total', 0);
+        $this->actingAs($accountant)->getJson('/api/accounting/summary?month=2025-12')
+            ->assertJsonPath('data.collected.total', 450000);
+    }
+
+    #[Test]
     public function le_filtre_mensuel_ne_garde_que_les_encaissements_du_mois(): void
     {
         $this->twoStudentsWithPayments();

@@ -35,7 +35,7 @@ class AdmissionApplication extends Model
         'reference', 'academic_year', 'level',
         'first_name', 'last_name', 'gender', 'birth_date', 'previous_school',
         'guardian_name', 'guardian_phone', 'guardian_email', 'address', 'notes',
-        'status', 'submitted_on', 'decision_note', 'decided_at', 'decided_by',
+        'status', 'submitted_on', 'decision_note', 'decided_at', 'decided_by', 'notified_at',
         'student_id', 'enrolled_at',
     ];
 
@@ -47,6 +47,7 @@ class AdmissionApplication extends Model
             'birth_date' => 'date:Y-m-d',
             'submitted_on' => 'date:Y-m-d',
             'decided_at' => 'datetime',
+            'notified_at' => 'datetime',
             'enrolled_at' => 'datetime',
         ];
     }

@@ -15,7 +15,7 @@ class NotificationLogController extends Controller
     {
         return NotificationLogResource::collection(
             NotificationLog::query()
-                ->with('student:id,first_name,last_name')
+                ->with(['student:id,first_name,last_name', 'admissionApplication:id,first_name,last_name,reference'])
                 ->when($request->string('student_id')->toString(), fn ($query, $id) => $query->where('student_id', $id))
                 ->when($request->string('status')->toString(), fn ($query, $status) => $query->where('status', $status))
                 ->orderByDesc('created_at')

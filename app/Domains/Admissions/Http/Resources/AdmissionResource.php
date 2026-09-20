@@ -33,6 +33,7 @@ class AdmissionResource extends JsonResource
             'submitted_on' => $this->submitted_on?->toDateString(),
             'decision_note' => $this->decision_note,
             'decided_at' => $this->decided_at?->toIso8601String(),
+            'notified_at' => $this->notified_at?->toIso8601String(),
             'decided_by' => $this->whenLoaded('decider', fn () => $this->decider ? ['id' => $this->decider->id, 'name' => $this->decider->name] : null),
             'student' => $this->whenLoaded('student', fn () => $this->student ? ['id' => $this->student->id, 'matricule' => $this->student->matricule] : null),
             'enrolled_at' => $this->enrolled_at?->toIso8601String(),

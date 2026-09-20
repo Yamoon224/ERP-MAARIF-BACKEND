@@ -66,7 +66,14 @@ final class EloquentPaymentRepository implements PaymentRepositoryContract
     {
         $status = $filters['status'] ?? null;
 
-        return Period::scope(Payment::query(), $filters, 'payments.paid_at')
+        // Une annee scolaire entiere = les paiements de ses inscriptions (donc
+        // aussi ceux d'une famille qui a paye en septembre pour une rentree en
+        // octobre) ; un trimestre ou un mois = la date du paiement.
+        $query = Period::isWholeYear($filters)
+            ? Payment::query()->whereHas('enrollment', fn ($enrollment) => $enrollment->where('academic_year', $filters['academic_year']))
+            : Period::scope(Payment::query(), $filters, 'payments.paid_at');
+
+        return $query
             ->when($filters['enrollment_id'] ?? null, fn ($query, $id) => $query->where('enrollment_id', $id))
             ->when($filters['student_id'] ?? null, fn ($query, $id) => $query->whereHas(
                 'enrollment',
