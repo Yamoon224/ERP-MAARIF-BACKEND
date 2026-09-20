@@ -5,6 +5,7 @@ namespace App\Domains\Attendance\Services;
 use App\Domains\Attendance\Contracts\AttendanceRepositoryContract;
 use App\Domains\Attendance\Exceptions\AttendanceException;
 use App\Models\AttendanceRecord;
+use App\Models\Student;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
@@ -73,7 +74,7 @@ final class AttendanceService
         return $this->records->summary($filters);
     }
 
-    /** @return Collection<int, array{student: \App\Models\Student, record: AttendanceRecord|null}> */
+    /** @return Collection<int, array{student: Student, record: AttendanceRecord|null}> */
     public function rollCall(string $schoolClassId, string $date): Collection
     {
         return $this->records->rollCall($schoolClassId, $date);

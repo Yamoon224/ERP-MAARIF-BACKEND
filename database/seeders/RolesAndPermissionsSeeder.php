@@ -11,9 +11,11 @@ use Spatie\Permission\PermissionRegistrar;
  * Roles et permissions de la plateforme (cahier des charges 3.1 : "gestion
  * des droits d'acces").
  *
- * Deux roles pour le personnel : l'administrateur gere les comptes, la
+ * Trois roles pour le personnel : l'administrateur gere les comptes, la
  * structure de l'etablissement et la discipline ; l'enseignant se limite aux
- * eleves, aux notes et aux presences. Les parents ne sont pas concernes par
+ * eleves, aux notes et aux presences ; le comptable encaisse la scolarite et
+ * suit les impayes sans acces aux notes ni a la discipline. Les parents ne
+ * sont pas concernes par
  * ce systeme de roles : ils sont des `Student` authentifie, jamais des
  * `User` (voir App\Models\Student).
  *
@@ -38,6 +40,8 @@ class RolesAndPermissionsSeeder extends Seeder
         'attendance.manage' => 'Saisir les presences et absences.',
         'discipline.manage' => 'Creer des convocations et des sanctions.',
         'notifications.view' => 'Consulter le journal des notifications envoyees aux tuteurs.',
+        'accounting.view' => 'Consulter les paiements de scolarite, les releves et les impayes.',
+        'accounting.manage' => 'Encaisser et annuler des paiements, fixer les frais de scolarite des classes.',
     ];
 
     /**
@@ -48,6 +52,7 @@ class RolesAndPermissionsSeeder extends Seeder
     private const ROLES = [
         'admin' => ['*'],
         'teacher' => ['students.view', 'academics.view', 'grades.manage', 'attendance.manage'],
+        'accountant' => ['students.view', 'academics.view', 'accounting.view', 'accounting.manage'],
     ];
 
     public function run(): void

@@ -3,6 +3,7 @@
 namespace App\Domains\Attendance\Contracts;
 
 use App\Models\AttendanceRecord;
+use App\Models\Student;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
@@ -51,7 +52,7 @@ interface AttendanceRepositoryContract
      * Feuille d'appel : les eleves actifs de la classe, chacun avec son
      * pointage du jour (ou null s'il n'a pas encore ete pointe).
      *
-     * @return Collection<int, array{student: \App\Models\Student, record: AttendanceRecord|null}>
+     * @return Collection<int, array{student: Student, record: AttendanceRecord|null}>
      */
     public function rollCall(string $schoolClassId, string $date): Collection;
 

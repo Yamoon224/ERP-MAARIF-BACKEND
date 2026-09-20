@@ -9,6 +9,7 @@ use App\Domains\Discipline\Contracts\SanctionRepositoryContract;
 use App\Domains\Discipline\Contracts\SummonRepositoryContract;
 use App\Domains\Grades\Contracts\GradeRepositoryContract;
 use App\Domains\Students\Contracts\EnrollmentRepositoryContract;
+use App\Models\Enrollment;
 use App\Models\Term;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -79,7 +80,7 @@ final class TermOverviewService
      * et leurs absences sur le trimestre.
      *
      * @param  array<string, mixed>  $filters  search, school_class_id
-     * @return array{page: LengthAwarePaginator<int, \App\Models\Enrollment>, averages: Collection<string, float>, absences: array<string, int>}
+     * @return array{page: LengthAwarePaginator<int, Enrollment>, averages: Collection<string, float>, absences: array<string, int>}
      */
     public function students(Term $term, array $filters, int $perPage = 15): array
     {
