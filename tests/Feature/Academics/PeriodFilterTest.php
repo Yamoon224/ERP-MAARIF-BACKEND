@@ -43,6 +43,20 @@ class PeriodFilterTest extends TestCase
     }
 
     #[Test]
+    public function le_parent_lit_le_calendrier_scolaire_sur_sa_propre_route_uniquement(): void
+    {
+        $student = $this->studentWithPassword();
+        $this->schoolYear('2025-2026');
+
+        $this->actingAs($student)->getJson('/api/parent/academic-years')
+            ->assertOk()
+            ->assertJsonPath('data.0.label', '2025-2026')
+            ->assertJsonCount(3, 'data.0.terms');
+
+        $this->actingAs($student)->getJson('/api/academic-years')->assertForbidden();
+    }
+
+    #[Test]
     public function les_presences_se_filtrent_par_mois_trimestre_et_annee(): void
     {
         $admin = $this->userWithRole('admin');

@@ -18,7 +18,7 @@ class SchoolClassResource extends JsonResource
             'level' => $this->level,
             'academic_year' => $this->academic_year,
             'monthly_fee' => (float) $this->monthly_fee,
-            'students_count' => $this->whenCounted('students'),
+            'students_count' => $this->whenCounted('students'), // alias de enrollments_count, voir EloquentSchoolClassRepository
             'main_teacher' => $this->whenLoaded('mainTeacher', fn () => $this->mainTeacher ? [
                 'id' => $this->mainTeacher->id,
                 'name' => $this->mainTeacher->name,

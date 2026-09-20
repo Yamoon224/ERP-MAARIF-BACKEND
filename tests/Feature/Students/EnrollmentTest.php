@@ -90,6 +90,26 @@ class EnrollmentTest extends TestCase
     }
 
     #[Test]
+    public function l_effectif_d_une_classe_passee_survit_au_passage_de_ses_eleves_en_classe_superieure(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $oldClass = $this->schoolYear('2025-2026')['class'];
+        $newClass = $this->schoolYear('2026-2027', 60000, '5eme A')['class'];
+        $students = Student::factory()->count(3)->create(['school_class_id' => $oldClass->id]);
+
+        foreach ($students as $student) {
+            $this->actingAs($admin)->postJson("/api/students/{$student->id}/enrollments", ['school_class_id' => $newClass->id])->assertCreated();
+        }
+
+        $this->actingAs($admin)->getJson('/api/classes?academic_year=2025-2026')
+            ->assertOk()
+            ->assertJsonPath('data.0.students_count', 3);
+        $this->actingAs($admin)->getJson('/api/classes?academic_year=2026-2027')
+            ->assertOk()
+            ->assertJsonPath('data.0.students_count', 3);
+    }
+
+    #[Test]
     public function un_enseignant_ne_peut_pas_reinscrire_un_eleve(): void
     {
         $teacher = $this->userWithRole('teacher');

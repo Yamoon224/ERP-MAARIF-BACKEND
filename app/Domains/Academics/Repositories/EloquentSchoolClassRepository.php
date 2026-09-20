@@ -20,7 +20,10 @@ final class EloquentSchoolClassRepository implements SchoolClassRepositoryContra
     public function paginate(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
         return SchoolClass::query()
-            ->withCount('students')
+            // Effectif = eleves inscrits dans la classe, pas ceux qui y sont
+            // "actuellement" : une classe d'une annee passee garde son effectif
+            // meme apres le passage de ses eleves en classe superieure.
+            ->withCount('enrollments as students_count')
             ->with('mainTeacher:id,name')
             ->when($filters['academic_year'] ?? null, fn ($query, $year) => $query->where('academic_year', $year))
             ->when($filters['search'] ?? null, fn ($query, $search) => $query->where('name', 'like', "%{$search}%"))
