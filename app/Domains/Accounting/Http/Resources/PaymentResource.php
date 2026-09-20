@@ -31,6 +31,7 @@ class PaymentResource extends JsonResource
             'period_type' => $this->period_type->value,
             'period_label' => $this->period_type->label(),
             'months' => $this->months,
+            'months_count' => count($this->months),
             'amount' => (float) $this->amount,
             'method' => $this->method->value,
             'method_label' => $this->method->label(),

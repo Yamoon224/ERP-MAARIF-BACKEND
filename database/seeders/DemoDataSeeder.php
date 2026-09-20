@@ -2,44 +2,46 @@
 
 namespace Database\Seeders;
 
+use App\Domains\Accounting\Enums\PaymentMethod;
+use App\Domains\Accounting\Enums\PaymentPeriod;
+use App\Domains\Accounting\Services\PaymentService;
 use App\Domains\Attendance\Enums\AttendanceStatus;
+use App\Domains\Discipline\Enums\SanctionType;
+use App\Domains\Discipline\Enums\SummonStatus;
 use App\Domains\Grades\Enums\GradeType;
+use App\Domains\Students\Services\EnrollmentService;
 use App\Models\AttendanceRecord;
+use App\Models\Enrollment;
 use App\Models\Grade;
+use App\Models\Sanction;
 use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\Subject;
+use App\Models\Summon;
 use App\Models\Term;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Hash;
 
-/** Jeu de demonstration : de quoi explorer l'application sans saisie manuelle. */
+/**
+ * Jeu de demonstration : de quoi explorer l'application sans saisie manuelle.
+ *
+ * Deux annees scolaires (la precedente, terminee, et l'actuelle) calculees a
+ * partir de la date du jour, pour que les filtres annee / trimestre / mois et
+ * la comptabilite aient de quoi montrer. Les eleves de l'annee precedente
+ * sont reinscrits pour l'annee actuelle.
+ */
 class DemoDataSeeder extends Seeder
 {
     public function run(): void
     {
-        $admin = User::create([
-            'name' => 'Admin Maarif',
-            'email' => 'admin@maarif.test',
-            'phone' => '+224600000001',
-            'password' => Hash::make('password'),
-            'is_active' => true,
-        ]);
-        $admin->assignRole('admin');
+        [$admin, $teacher, $accountant] = $this->createStaff();
 
-        $teacher = User::create([
-            'name' => 'Mariam Diallo',
-            'email' => 'enseignant@maarif.test',
-            'phone' => '+224600000002',
-            'password' => Hash::make('password'),
-            'is_active' => true,
-        ]);
-        $teacher->assignRole('teacher');
-
-        $terms = Term::factory()->count(3)->create();
-        $currentTerm = $terms->first();
-        $currentTerm->update(['is_current' => true]);
+        $startYear = now()->month >= 9 ? now()->year : now()->year - 1;
+        $previousYear = $this->createYear($startYear - 1);
+        $currentYear = $this->createYear($startYear);
 
         $subjects = collect([
             ['name' => 'Mathematiques', 'code' => 'MATH', 'coefficient' => 4],
@@ -48,37 +50,201 @@ class DemoDataSeeder extends Seeder
             ['name' => 'Sciences de la vie', 'code' => 'SVT', 'coefficient' => 2],
         ])->map(fn (array $data) => Subject::create($data));
 
-        $schoolClass = SchoolClass::create([
-            'name' => '6eme A',
-            'level' => '6eme',
-            'academic_year' => '2025-2026',
+        $previousClass = $this->createClass('6eme A', '6eme', $previousYear['label'], 50000, $teacher, $subjects);
+        $currentClass6 = $this->createClass('6eme A', '6eme', $currentYear['label'], 55000, $teacher, $subjects);
+        $currentClass5 = $this->createClass('5eme A', '5eme', $currentYear['label'], 55000, $teacher, $subjects);
+
+        $students = Student::factory()->count(10)->create(['school_class_id' => $previousClass->id]);
+
+        $this->recordActivity($students, $previousYear['terms'], $subjects, $teacher, $admin);
+        $this->recordPayments($students, $previousYear['label'], $accountant);
+
+        // Passage en classe superieure : nouvelle inscription, ancienne conservee.
+        $enrollments = app(EnrollmentService::class);
+        $students->each(fn (Student $student) => $enrollments->enroll($student, $currentClass5->id));
+
+        $newcomers = Student::factory()->count(5)->create(['school_class_id' => $currentClass6->id]);
+        $this->recordActivity($students->concat($newcomers), $currentYear['terms'], $subjects, $teacher, $admin);
+        $this->recordPayments($students->concat($newcomers), $currentYear['label'], $accountant);
+    }
+
+    /** @return array{User, User, User} */
+    private function createStaff(): array
+    {
+        $accounts = [
+            ['Admin Maarif', 'admin@maarif.test', '+224600000001', 'admin'],
+            ['Mariam Diallo', 'enseignant@maarif.test', '+224600000002', 'teacher'],
+            ['Souleymane Bah', 'comptable@maarif.test', '+224600000003', 'accountant'],
+        ];
+
+        return array_map(function (array $account): User {
+            [$name, $email, $phone, $role] = $account;
+
+            $user = User::create([
+                'name' => $name,
+                'email' => $email,
+                'phone' => $phone,
+                'password' => Hash::make('password'),
+                'is_active' => true,
+            ]);
+            $user->assignRole($role);
+
+            return $user;
+        }, $accounts);
+    }
+
+    /**
+     * Trois trimestres de trois mois (octobre a juin : neuf mois de scolarite).
+     * Le trimestre courant est celui qui contient aujourd'hui ; avant la
+     * rentree, c'est le premier trimestre de l'annee en cours.
+     *
+     * @return array{label: string, terms: Collection<int, Term>}
+     */
+    private function createYear(int $startYear): array
+    {
+        $label = $startYear.'-'.($startYear + 1);
+        $windows = [
+            ['1er trimestre', "{$startYear}-10-01", "{$startYear}-12-31"],
+            ['2eme trimestre', ($startYear + 1).'-01-01', ($startYear + 1).'-03-31'],
+            ['3eme trimestre', ($startYear + 1).'-04-01', ($startYear + 1).'-06-30'],
+        ];
+
+        $terms = collect($windows)->map(fn (array $window) => Term::create([
+            'name' => $window[0],
+            'academic_year' => $label,
+            'starts_at' => $window[1],
+            'ends_at' => $window[2],
+            'is_current' => false,
+        ]));
+
+        $isCurrentYear = $startYear === (now()->month >= 9 ? now()->year : now()->year - 1);
+        if ($isCurrentYear) {
+            $current = $terms->first(fn (Term $term) => Carbon::now()->between($term->starts_at->startOfDay(), $term->ends_at->endOfDay())) ?? $terms->first();
+            $current->update(['is_current' => true]);
+        }
+
+        return ['label' => $label, 'terms' => $terms];
+    }
+
+    /** @param  Collection<int, Subject>  $subjects */
+    private function createClass(string $name, string $level, string $year, int $fee, User $teacher, Collection $subjects): SchoolClass
+    {
+        $class = SchoolClass::create([
+            'name' => $name,
+            'level' => $level,
+            'academic_year' => $year,
+            'monthly_fee' => $fee,
             'main_teacher_id' => $teacher->id,
         ]);
 
-        $students = Student::factory()
-            ->count(10)
-            ->create(['school_class_id' => $schoolClass->id]);
+        $subjects->each(fn (Subject $subject) => $class->subjects()->attach($subject->id, ['teacher_id' => $teacher->id]));
 
-        foreach ($students as $student) {
-            foreach ($subjects as $subject) {
-                Grade::create([
-                    'student_id' => $student->id,
-                    'subject_id' => $subject->id,
-                    'term_id' => $currentTerm->id,
-                    'teacher_id' => $teacher->id,
-                    'type' => GradeType::Devoir,
-                    'value' => fake()->randomFloat(2, 8, 20),
-                    'max_value' => 20,
-                    'recorded_at' => now()->subDays(fake()->numberBetween(1, 20)),
-                ]);
+        return $class;
+    }
+
+    /**
+     * Notes, presences, une sanction et une convocation pour chaque trimestre
+     * deja commence ; rien pour un trimestre a venir.
+     *
+     * @param  Collection<int, Student>  $students
+     * @param  Collection<int, Term>  $terms
+     * @param  Collection<int, Subject>  $subjects
+     */
+    private function recordActivity(Collection $students, Collection $terms, Collection $subjects, User $teacher, User $admin): void
+    {
+        $today = Carbon::now()->startOfDay();
+
+        foreach ($terms as $term) {
+            if ($term->starts_at->startOfDay()->greaterThan($today)) {
+                continue;
             }
 
-            AttendanceRecord::create([
+            $last = $term->ends_at->startOfDay()->min($today);
+            $span = max(1, (int) $term->starts_at->startOfDay()->diffInDays($last));
+
+            foreach ($students as $student) {
+                foreach ($subjects as $subject) {
+                    Grade::create([
+                        'student_id' => $student->id,
+                        'subject_id' => $subject->id,
+                        'term_id' => $term->id,
+                        'teacher_id' => $teacher->id,
+                        'type' => GradeType::Devoir,
+                        'value' => fake()->randomFloat(2, 8, 20),
+                        'max_value' => 20,
+                        'recorded_at' => $term->starts_at->copy()->addDays(fake()->numberBetween(0, $span))->toDateString(),
+                    ]);
+                }
+
+                foreach (range(1, 3) as $ignored) {
+                    $date = $term->starts_at->copy()->addDays(fake()->numberBetween(0, $span));
+                    if ($date->isWeekend()) {
+                        continue;
+                    }
+
+                    AttendanceRecord::firstOrCreate(
+                        ['student_id' => $student->id, 'date' => $date->toDateString()],
+                        [
+                            'status' => fake()->randomElement([AttendanceStatus::Absent, AttendanceStatus::Late]),
+                            'justified' => fake()->boolean(40),
+                            'reason' => fake()->boolean(40) ? 'Maladie' : null,
+                            'recorded_by' => $teacher->id,
+                        ],
+                    );
+                }
+            }
+
+            $student = $students->random();
+            Sanction::create([
                 'student_id' => $student->id,
-                'date' => now()->subDay()->toDateString(),
-                'status' => fake()->randomElement(AttendanceStatus::cases()),
-                'recorded_by' => $teacher->id,
+                'type' => SanctionType::Warning,
+                'reason' => 'Bavardages repetes en classe',
+                'start_date' => $term->starts_at->copy()->addDays(fake()->numberBetween(0, $span))->toDateString(),
+                'created_by' => $admin->id,
             ]);
+            Summon::create([
+                'student_id' => $students->random()->id,
+                'reason' => 'Resultats en baisse',
+                'scheduled_at' => $term->starts_at->copy()->addDays(fake()->numberBetween(0, $span))->setTime(9, 0),
+                'location' => 'Bureau de la direction',
+                'status' => SummonStatus::Done,
+                'created_by' => $admin->id,
+            ]);
+        }
+    }
+
+    /**
+     * Des familles reglent l'annee, d'autres le trimestre ou le mois, d'autres
+     * pas du tout : la comptabilite a ainsi des impayes a montrer.
+     *
+     * @param  Collection<int, Student>  $students
+     */
+    private function recordPayments(Collection $students, string $academicYear, User $accountant): void
+    {
+        $payments = app(PaymentService::class);
+        $formulas = [PaymentPeriod::Annual, PaymentPeriod::Semiannual, PaymentPeriod::Quarterly, PaymentPeriod::Monthly, null];
+        $today = Carbon::now()->startOfDay();
+
+        foreach ($students->values() as $index => $student) {
+            $period = $formulas[$index % count($formulas)];
+            $enrollment = Enrollment::query()
+                ->where('student_id', $student->id)
+                ->where('academic_year', $academicYear)
+                ->first();
+
+            if ($period === null || $enrollment === null) {
+                continue;
+            }
+
+            // Un paiement ne peut pas etre date dans le futur : avant la
+            // rentree, les recus sont dates du jour.
+            $yearStart = Carbon::create((int) substr($academicYear, 0, 4), 10, 1)->startOfDay();
+            $paidAt = $yearStart->min($today)->toDateString();
+
+            $payments->register($enrollment, $period, [
+                'method' => fake()->randomElement(PaymentMethod::cases())->value,
+                'paid_at' => $paidAt,
+            ], $accountant->id);
         }
     }
 }

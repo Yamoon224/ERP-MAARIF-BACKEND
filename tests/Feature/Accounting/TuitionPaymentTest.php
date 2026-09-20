@@ -8,6 +8,7 @@ use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\TuitionInstallment;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Concerns\BuildsSchoolYear;
 use Tests\TestCase;
@@ -98,26 +99,29 @@ class TuitionPaymentTest extends TestCase
         $this->assertSame(1, TuitionInstallment::whereNotNull('payment_id')->count());
     }
 
-    #[Test]
-    public function chaque_formule_regle_le_bon_nombre_de_mois(): void
+    /** @return array<string, array{string, int}> */
+    public static function formules(): array
     {
+        return [
+            'mensuel' => ['monthly', 1],
+            'trimestre' => ['quarterly', 3],
+            'semestre' => ['semiannual', 6],
+            'annee scolaire' => ['annual', 9],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('formules')]
+    public function chaque_formule_regle_le_bon_nombre_de_mois(string $period, int $months): void
+    {
+        ['enrollment' => $enrollment] = $this->enrolledStudent();
         $accountant = $this->userWithRole('accountant');
 
-        $expected = ['monthly' => 1, 'quarterly' => 3, 'semiannual' => 6, 'annual' => 9];
-
-        foreach ($expected as $period => $months) {
-            Payment::query()->delete();
-            TuitionInstallment::query()->update(['payment_id' => null]);
-            ['enrollment' => $enrollment] = $this->enrolledStudent();
-
-            $this->actingAs($accountant)->postJson('/api/payments', $this->pay($enrollment, $period))
-                ->assertCreated()
-                ->assertJsonCount($months, 'data.months')
-                ->assertJsonPath('data.amount', $months * self::FEE);
-
-            // Chaque tour de boucle utilise sa propre classe : on repart d'un etat vierge.
-            SchoolClass::query()->update(['name' => 'archive-'.$period.'-'.uniqid()]);
-        }
+        $this->actingAs($accountant)->postJson('/api/payments', $this->pay($enrollment, $period))
+            ->assertCreated()
+            ->assertJsonCount($months, 'data.months')
+            ->assertJsonPath('data.months_count', $months)
+            ->assertJsonPath('data.amount', $months * self::FEE);
     }
 
     #[Test]
