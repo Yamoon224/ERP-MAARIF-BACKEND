@@ -157,6 +157,9 @@ Route::middleware(['auth:sanctum', 'account_type:staff'])->group(function (): vo
 Route::middleware(['auth:sanctum', 'account_type:parent'])->group(function (): void {
     Route::post('/parent/logout', [ParentAuthController::class, 'logout']);
     Route::get('/parent/me', [ParentAuthController::class, 'me']);
+    // Calendrier scolaire (annees et trimestres) : information generale de
+    // l'etablissement, necessaire aux filtres de periode du portail.
+    Route::get('/parent/academic-years', [AcademicYearController::class, 'index']);
     Route::put('/parent/me/password', [ParentAuthController::class, 'changePassword']);
     Route::get('/parent/bulletin', [BulletinController::class, 'mine']);
     Route::get('/parent/attendance', [AttendanceController::class, 'mine']);
