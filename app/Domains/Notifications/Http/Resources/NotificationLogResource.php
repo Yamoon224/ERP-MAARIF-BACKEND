@@ -27,6 +27,7 @@ class NotificationLogResource extends JsonResource
             'type' => $this->type->value,
             'recipient' => $this->recipient,
             'subject' => $this->subject,
+            'body' => $this->body,
             'status' => $this->status->value,
             'error' => $this->error,
             'sent_at' => $this->sent_at?->toIso8601String(),

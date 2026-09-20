@@ -174,6 +174,7 @@ Route::middleware(['auth:sanctum', 'account_type:staff'])->group(function (): vo
 
     Route::middleware('permission:notifications.view')->group(function (): void {
         Route::get('/notification-logs', [NotificationLogController::class, 'index']);
+        Route::get('/notification-logs/summary', [NotificationLogController::class, 'summary']);
     });
 });
 

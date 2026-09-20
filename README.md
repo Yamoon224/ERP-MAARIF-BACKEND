@@ -25,20 +25,46 @@ Domains/<Domaine>/
 | Domaine | Responsabilite |
 |---|---|
 | `Auth` | Connexion du personnel (e-mail) et des parents (matricule de l'eleve) |
-| `Users` | Comptes administrateurs et enseignants, roles Spatie |
-| `Students` | Inscription des eleves, generation du matricule et du mot de passe initial |
-| `Academics` | Classes, matieres, trimestres |
+| `Users` | Comptes du personnel (administrateurs, enseignants, comptables), roles Spatie |
+| `Students` | Inscription des eleves, matricule, mot de passe initial, **inscriptions annuelles** |
+| `Academics` | Classes, matieres, trimestres, annees scolaires |
 | `Grades` | Saisie des notes, calcul des bulletins ponderes par coefficient |
-| `Attendance` | Presences, absences, retards |
+| `Attendance` | Presences, **appel de classe**, absences, retards, justification |
 | `Discipline` | Convocations et sanctions, avec notification automatique du tuteur |
+| `Accounting` | **Scolarite mensuelle**, paiements (mois, trimestre, semestre, annee), recus, impayes |
+| `Reporting` | Tableau de bord et detail d'un trimestre (agregats sur plusieurs domaines) |
 | `Notifications` | Envoi e-mail/SMS au tuteur, journalise dans `notification_logs` |
 
 ### Authentification
 
 Deux types de comptes, un seul mecanisme de jeton (Sanctum) :
 
-- **Personnel** (`App\Models\User`) : `POST /api/login` avec e-mail + mot de passe. Roles `admin` / `teacher` via Spatie Permission.
+- **Personnel** (`App\Models\User`) : `POST /api/login` avec e-mail + mot de passe. Roles `admin` / `teacher` / `accountant` via Spatie Permission. `PUT /api/me` et `PUT /api/me/password` : profil et mot de passe (les autres sessions sont fermees au changement de mot de passe).
 - **Parent** (`App\Models\Student`) : `POST /api/parent/login` avec le **matricule de l'eleve** + mot de passe (cahier des charges 3.1). Le middleware `account_type:staff|parent` cloisonne les deux zones de l'API : un jeton parent ne peut jamais atteindre une route d'administration, et reciproquement.
+
+### Annee scolaire, trimestres, filtres
+
+Une annee scolaire (`2025-2026`) compte **trois trimestres**. Un eleve s'inscrit pour **l'annee entiere** : la table `enrollments` garde une inscription par eleve et par annee (`students.school_class_id` reste la classe *actuelle*, synchronisee par `StudentEnrollmentObserver`). Reinscrire un eleve n'efface donc jamais son historique : `POST /api/students/{id}/enrollments`.
+
+Les listes et indicateurs (presences, notes, sanctions, convocations, paiements, tableau de bord, comptabilite) acceptent les memes filtres de periode, resolus par `App\Domains\Shared\Support\Period` :
+
+| Parametre | Exemple | Sens |
+|---|---|---|
+| `academic_year` | `2025-2026` | de la premiere a la derniere date des trimestres de l'annee |
+| `term_id` | uuid | dates du trimestre |
+| `month` | `2025-11` | le mois (l'emporte sur les deux autres) |
+
+`GET /api/academic-years` liste les annees avec leurs trimestres (portail parent : `/api/parent/academic-years`). `GET /api/terms/{id}/overview|subjects|students` donne le detail d'un trimestre ; ses notes, sanctions, convocations et presences se lisent avec les listes habituelles filtrees par `term_id`.
+
+### Absences
+
+`GET /api/attendance-records/roll-call` (feuille d'appel d'une classe), `POST /api/attendance-records/bulk` (appel enregistre en un seul bloc, tout ou rien), `GET /api/attendance-records/summary` (bilan et eleves les plus absents). Une absence se justifie apres coup par `PUT /api/attendance-records/{id}` (`justified`, `reason`).
+
+### Scolarite et comptabilite
+
+La scolarite est **mensuelle** (`school_classes.monthly_fee`) ; la famille la regle par mois, trimestre, semestre ou annee : ce n'est que le nombre de mois regles d'un coup (1, 3, 6, tous les restants), toujours en commencant par le plus ancien impaye. Les mois d'une annee se deduisent de ses trimestres (octobre a juin = 9 mois) et forment un echeancier (`tuition_installments`) genere a l'inscription, a la modification du tarif de la classe et a celle des trimestres. Le montant est calcule par le serveur, jamais fourni par le client.
+
+Permissions : `accounting.view` (paiements, releves, impayes) et `accounting.manage` (encaisser, annuler, fixer les tarifs). Un paiement n'est jamais supprime : l'annuler libere ses mois et garde le recu. L'encaissement d'une *annee* compte les paiements de ses inscriptions (donc les paiements anticipes) ; celui d'un *trimestre* ou d'un *mois* suit la date du paiement.
 
 ## Mise en route
 
@@ -51,7 +77,9 @@ php artisan migrate --seed
 php artisan serve
 ```
 
-Le seeder cree un administrateur (`admin@maarif.test` / `password`), un enseignant (`enseignant@maarif.test` / `password`) et un jeu de demonstration (classe, matieres, trimestres, eleves, notes).
+Le seeder cree un administrateur (`admin@maarif.test`), un enseignant (`enseignant@maarif.test`), un comptable (`comptable@maarif.test`), tous en `password`, et un jeu de demonstration sur deux annees scolaires (classes, matieres, eleves reinscrits, notes, presences, sanctions, paiements).
+
+**Base deja en service** : apres `php artisan migrate`, relancer `php artisan db:seed --class=RolesAndPermissionsSeeder` (idempotent) pour creer les permissions `accounting.*` et le role `accountant`. Les eleves deja affectes a une classe recoivent automatiquement leur inscription (migration).
 
 ## Tests
 

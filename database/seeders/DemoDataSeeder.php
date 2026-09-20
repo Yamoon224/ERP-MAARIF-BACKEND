@@ -3,10 +3,10 @@
 namespace Database\Seeders;
 
 use App\Domains\Accounting\Enums\PaymentMethod;
-use App\Domains\Admissions\Enums\AdmissionStatus;
-use App\Domains\Admissions\Services\AdmissionService;
 use App\Domains\Accounting\Enums\PaymentPeriod;
 use App\Domains\Accounting\Services\PaymentService;
+use App\Domains\Admissions\Enums\AdmissionStatus;
+use App\Domains\Admissions\Services\AdmissionService;
 use App\Domains\Attendance\Enums\AttendanceStatus;
 use App\Domains\Discipline\Enums\SanctionType;
 use App\Domains\Discipline\Enums\SummonStatus;
