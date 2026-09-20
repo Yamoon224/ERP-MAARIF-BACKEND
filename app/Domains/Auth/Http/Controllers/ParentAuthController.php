@@ -2,6 +2,7 @@
 
 namespace App\Domains\Auth\Http\Controllers;
 
+use App\Domains\Auth\Http\Requests\ChangePasswordRequest;
 use App\Domains\Auth\Http\Requests\ParentLoginRequest;
 use App\Domains\Auth\Http\Resources\AuthenticatedStudentResource;
 use App\Domains\Auth\Services\ParentAuthService;
@@ -41,5 +42,14 @@ class ParentAuthController extends Controller
     public function me(Request $request): AuthenticatedStudentResource
     {
         return new AuthenticatedStudentResource($request->user()->load('schoolClass'));
+    }
+
+    public function changePassword(ChangePasswordRequest $request): JsonResponse
+    {
+        /** @var Student $student */
+        $student = $request->user();
+        $this->auth->changePassword($student, $request->validated('current_password'), $request->validated('password'));
+
+        return response()->json(null, 204);
     }
 }

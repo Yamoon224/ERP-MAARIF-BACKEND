@@ -2,6 +2,7 @@
 
 namespace App\Domains\Auth\Services;
 
+use App\Models\PersonalAccessToken;
 use App\Models\Student;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
@@ -53,5 +54,26 @@ final class ParentAuthService
     public function logout(Student $student): void
     {
         $student->currentAccessToken()->delete();
+    }
+
+    /**
+     * Change le mot de passe du portail et ferme les autres sessions.
+     *
+     * @throws ValidationException
+     */
+    public function changePassword(Student $student, string $currentPassword, string $newPassword): void
+    {
+        if (! Hash::check($currentPassword, $student->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['Le mot de passe actuel est incorrect.'],
+            ]);
+        }
+
+        $student->update(['password' => $newPassword]);
+
+        $current = $student->currentAccessToken();
+        $student->tokens()
+            ->when($current instanceof PersonalAccessToken, fn ($tokens) => $tokens->where('id', '!=', $current->id))
+            ->delete();
     }
 }

@@ -39,7 +39,7 @@ final class EloquentAttendanceRepository implements AttendanceRepositoryContract
             ->filter(fn ($row) => $row->status === $status && ($justified === null || (bool) $row->justified === $justified))
             ->sum('total');
 
-        $absences = $this->filtered($filters)
+        $absences = $topAbsentees <= 0 ? collect() : $this->filtered($filters)
             ->whereIn('status', [AttendanceStatus::Absent->value, AttendanceStatus::Late->value])
             ->selectRaw(
                 "student_id,
@@ -77,6 +77,17 @@ final class EloquentAttendanceRepository implements AttendanceRepositoryContract
                 'lates' => (int) $row->lates,
             ])->values()->all(),
         ];
+    }
+
+    public function absenceCounts(array $filters = []): array
+    {
+        return $this->filtered($filters)
+            ->where('status', AttendanceStatus::Absent->value)
+            ->selectRaw('student_id, count(*) as absences')
+            ->groupBy('student_id')
+            ->pluck('absences', 'student_id')
+            ->map(fn ($count) => (int) $count)
+            ->all();
     }
 
     public function rollCall(string $schoolClassId, string $date): Collection

@@ -56,4 +56,12 @@ final class AcademicYearService
             ];
         });
     }
+
+    /** Annee proposee par defaut : celle du trimestre courant, sinon la plus recente. */
+    public function defaultYear(): ?string
+    {
+        $years = $this->all();
+
+        return ($years->firstWhere('is_current', true) ?? $years->first())['label'] ?? null;
+    }
 }

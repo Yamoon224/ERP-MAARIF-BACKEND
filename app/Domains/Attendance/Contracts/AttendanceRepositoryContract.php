@@ -40,6 +40,14 @@ interface AttendanceRepositoryContract
     public function summary(array $filters = [], int $topAbsentees = 5): array;
 
     /**
+     * Nombre d'absences (hors retards) par eleve sur la periode.
+     *
+     * @param  array<string, mixed>  $filters  memes filtres que `paginate`
+     * @return array<string, int> identifiant d'eleve => absences
+     */
+    public function absenceCounts(array $filters = []): array;
+
+    /**
      * Feuille d'appel : les eleves actifs de la classe, chacun avec son
      * pointage du jour (ou null s'il n'a pas encore ete pointe).
      *

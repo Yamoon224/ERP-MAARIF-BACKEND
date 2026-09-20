@@ -8,6 +8,12 @@ use App\Domains\Academics\Contracts\TermRepositoryContract;
 use App\Domains\Academics\Repositories\EloquentSchoolClassRepository;
 use App\Domains\Academics\Repositories\EloquentSubjectRepository;
 use App\Domains\Academics\Repositories\EloquentTermRepository;
+use App\Domains\Accounting\Contracts\AccountingReportRepositoryContract;
+use App\Domains\Accounting\Contracts\InstallmentRepositoryContract;
+use App\Domains\Accounting\Contracts\PaymentRepositoryContract;
+use App\Domains\Accounting\Repositories\EloquentAccountingReportRepository;
+use App\Domains\Accounting\Repositories\EloquentInstallmentRepository;
+use App\Domains\Accounting\Repositories\EloquentPaymentRepository;
 use App\Domains\Attendance\Contracts\AttendanceRepositoryContract;
 use App\Domains\Attendance\Repositories\EloquentAttendanceRepository;
 use App\Domains\Discipline\Contracts\SanctionRepositoryContract;
@@ -19,10 +25,14 @@ use App\Domains\Grades\Repositories\EloquentGradeRepository;
 use App\Domains\Notifications\Contracts\NotificationSenderContract;
 use App\Domains\Notifications\Senders\ArrayNotificationSender;
 use App\Domains\Notifications\Senders\LogNotificationSender;
+use App\Domains\Students\Contracts\EnrollmentRepositoryContract;
 use App\Domains\Students\Contracts\StudentRepositoryContract;
+use App\Domains\Students\Observers\StudentEnrollmentObserver;
+use App\Domains\Students\Repositories\EloquentEnrollmentRepository;
 use App\Domains\Students\Repositories\EloquentStudentRepository;
 use App\Domains\Users\Contracts\UserRepositoryContract;
 use App\Domains\Users\Repositories\EloquentUserRepository;
+use App\Models\Student;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -39,6 +49,7 @@ class DomainServiceProvider extends ServiceProvider
     public array $bindings = [
         UserRepositoryContract::class => EloquentUserRepository::class,
         StudentRepositoryContract::class => EloquentStudentRepository::class,
+        EnrollmentRepositoryContract::class => EloquentEnrollmentRepository::class,
 
         SchoolClassRepositoryContract::class => EloquentSchoolClassRepository::class,
         SubjectRepositoryContract::class => EloquentSubjectRepository::class,
@@ -49,11 +60,22 @@ class DomainServiceProvider extends ServiceProvider
 
         SummonRepositoryContract::class => EloquentSummonRepository::class,
         SanctionRepositoryContract::class => EloquentSanctionRepository::class,
+
+        PaymentRepositoryContract::class => EloquentPaymentRepository::class,
+        InstallmentRepositoryContract::class => EloquentInstallmentRepository::class,
+        AccountingReportRepositoryContract::class => EloquentAccountingReportRepository::class,
     ];
 
     public function register(): void
     {
         $this->registerNotificationSender();
+    }
+
+    public function boot(): void
+    {
+        // Un eleve est toujours inscrit pour l'annee de sa classe (voir
+        // StudentEnrollmentObserver).
+        Student::observe(StudentEnrollmentObserver::class);
     }
 
     /**

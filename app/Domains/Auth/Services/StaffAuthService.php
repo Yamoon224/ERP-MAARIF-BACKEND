@@ -2,9 +2,11 @@
 
 namespace App\Domains\Auth\Services;
 
+use App\Models\PersonalAccessToken;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -51,5 +53,37 @@ final class StaffAuthService
     public function logout(User $user): void
     {
         $user->currentAccessToken()->delete();
+    }
+
+    /**
+     * @param  array{name: string, email: string, phone?: string|null}  $data
+     */
+    public function updateProfile(User $user, array $data): User
+    {
+        $user->update($data);
+
+        return $user->refresh();
+    }
+
+    /**
+     * Change le mot de passe et ferme les autres sessions : un mot de passe
+     * change parce qu'il a fuite ne doit pas laisser un jeton vole ouvert.
+     *
+     * @throws ValidationException
+     */
+    public function changePassword(User $user, string $currentPassword, string $newPassword): void
+    {
+        if (! Hash::check($currentPassword, $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['Le mot de passe actuel est incorrect.'],
+            ]);
+        }
+
+        $user->update(['password' => $newPassword]);
+
+        $current = $user->currentAccessToken();
+        $user->tokens()
+            ->when($current instanceof PersonalAccessToken, fn ($tokens) => $tokens->where('id', '!=', $current->id))
+            ->delete();
     }
 }

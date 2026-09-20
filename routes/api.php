@@ -1,8 +1,13 @@
 <?php
 
+use App\Domains\Academics\Http\Controllers\AcademicYearController;
 use App\Domains\Academics\Http\Controllers\SchoolClassController;
 use App\Domains\Academics\Http\Controllers\SubjectController;
 use App\Domains\Academics\Http\Controllers\TermController;
+use App\Domains\Accounting\Http\Controllers\AccountingReportController;
+use App\Domains\Accounting\Http\Controllers\FeeController;
+use App\Domains\Accounting\Http\Controllers\PaymentController;
+use App\Domains\Accounting\Http\Controllers\TuitionController;
 use App\Domains\Attendance\Http\Controllers\AttendanceController;
 use App\Domains\Auth\Http\Controllers\ParentAuthController;
 use App\Domains\Auth\Http\Controllers\StaffAuthController;
@@ -11,7 +16,10 @@ use App\Domains\Discipline\Http\Controllers\SummonController;
 use App\Domains\Grades\Http\Controllers\BulletinController;
 use App\Domains\Grades\Http\Controllers\GradeController;
 use App\Domains\Notifications\Http\Controllers\NotificationLogController;
+use App\Domains\Reporting\Http\Controllers\DashboardController;
+use App\Domains\Reporting\Http\Controllers\TermOverviewController;
 use App\Domains\Shared\Http\Controllers\HealthController;
+use App\Domains\Students\Http\Controllers\EnrollmentController;
 use App\Domains\Students\Http\Controllers\StudentController;
 use App\Domains\Users\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -35,6 +43,9 @@ use Illuminate\Support\Facades\Route;
 |      toujours `$request->user()` qui le fournit (voir les methodes `mine`
 |      des controleurs).
 |
+| Filtres de periode : les listes et indicateurs acceptent `academic_year`
+| (2025-2026), `term_id` et `month` (2025-11). Voir App\Domains\Shared\Support\Period.
+|
 */
 
 Route::get('/health', HealthController::class);
@@ -43,11 +54,18 @@ Route::post('/login', [StaffAuthController::class, 'login'])->middleware('thrott
 Route::post('/parent/login', [ParentAuthController::class, 'login'])->middleware('throttle:6,1');
 
 // =============================================================================
-// Personnel (administrateurs, enseignants)
+// Personnel (administrateurs, enseignants, comptables)
 // =============================================================================
 Route::middleware(['auth:sanctum', 'account_type:staff'])->group(function (): void {
     Route::post('/logout', [StaffAuthController::class, 'logout']);
     Route::get('/me', [StaffAuthController::class, 'me']);
+    Route::put('/me', [StaffAuthController::class, 'updateProfile']);
+    Route::put('/me/password', [StaffAuthController::class, 'changePassword']);
+
+    // Tableau de bord : ouvert a tout le personnel, mais les blocs discipline
+    // et comptabilite ne sont remplis que pour qui en a le droit (voir
+    // DashboardController).
+    Route::get('/dashboard', DashboardController::class);
 
     Route::middleware('permission:users.manage')->group(function (): void {
         Route::apiResource('users', UserController::class);
@@ -58,6 +76,7 @@ Route::middleware(['auth:sanctum', 'account_type:staff'])->group(function (): vo
     // trimestre). Seule la modification de la structure est reservee a
     // `academics.manage`.
     Route::middleware('permission:academics.view')->group(function (): void {
+        Route::get('/academic-years', [AcademicYearController::class, 'index']);
         Route::get('/classes', [SchoolClassController::class, 'index']);
         Route::get('/classes/{schoolClass}', [SchoolClassController::class, 'show']);
         Route::get('/subjects', [SubjectController::class, 'index']);
@@ -65,6 +84,9 @@ Route::middleware(['auth:sanctum', 'account_type:staff'])->group(function (): vo
         Route::get('/terms', [TermController::class, 'all']);
         Route::get('/terms/paginated', [TermController::class, 'index']);
         Route::get('/terms/{term}', [TermController::class, 'show']);
+        Route::get('/terms/{term}/overview', [TermOverviewController::class, 'summary']);
+        Route::get('/terms/{term}/subjects', [TermOverviewController::class, 'subjects']);
+        Route::get('/terms/{term}/students', [TermOverviewController::class, 'students']);
     });
     Route::middleware('permission:academics.manage')->group(function (): void {
         Route::apiResource('classes', SchoolClassController::class)
@@ -78,6 +100,7 @@ Route::middleware(['auth:sanctum', 'account_type:staff'])->group(function (): vo
         Route::get('/students', [StudentController::class, 'index']);
         Route::get('/students/{student}', [StudentController::class, 'show']);
         Route::get('/students/{student}/bulletin', [BulletinController::class, 'forStudent']);
+        Route::get('/students/{student}/enrollments', [EnrollmentController::class, 'index']);
     });
     Route::middleware('permission:students.manage')->group(function (): void {
         Route::post('/students', [StudentController::class, 'store']);
@@ -85,6 +108,7 @@ Route::middleware(['auth:sanctum', 'account_type:staff'])->group(function (): vo
         Route::patch('/students/{student}', [StudentController::class, 'update']);
         Route::delete('/students/{student}', [StudentController::class, 'destroy']);
         Route::post('/students/{student}/reset-password', [StudentController::class, 'resetPassword']);
+        Route::post('/students/{student}/enrollments', [EnrollmentController::class, 'store']);
     });
 
     Route::middleware('permission:grades.manage')->group(function (): void {
@@ -92,6 +116,9 @@ Route::middleware(['auth:sanctum', 'account_type:staff'])->group(function (): vo
     });
 
     Route::middleware('permission:attendance.manage')->group(function (): void {
+        Route::get('/attendance-records/summary', [AttendanceController::class, 'summary']);
+        Route::get('/attendance-records/roll-call', [AttendanceController::class, 'rollCall']);
+        Route::post('/attendance-records/bulk', [AttendanceController::class, 'storeBulk']);
         Route::apiResource('attendance-records', AttendanceController::class)
             ->except(['show'])
             ->parameters(['attendance-records' => 'attendanceRecord']);
@@ -100,6 +127,23 @@ Route::middleware(['auth:sanctum', 'account_type:staff'])->group(function (): vo
     Route::middleware('permission:discipline.manage')->group(function (): void {
         Route::apiResource('summons', SummonController::class);
         Route::apiResource('sanctions', SanctionController::class);
+    });
+
+    // Comptabilite : la consultation (paiements, releves, impayes) est
+    // separee de l'encaissement, pour qu'un compte en lecture seule puisse
+    // auditer sans pouvoir creer ni annuler un recu.
+    Route::middleware('permission:accounting.view')->group(function (): void {
+        Route::get('/payments', [PaymentController::class, 'index']);
+        Route::get('/payments/{payment}', [PaymentController::class, 'show']);
+        Route::get('/enrollments/{enrollment}/tuition', [TuitionController::class, 'show']);
+        Route::get('/enrollments/{enrollment}/payment-preview', [TuitionController::class, 'preview']);
+        Route::get('/accounting/summary', [AccountingReportController::class, 'summary']);
+        Route::get('/accounting/arrears', [AccountingReportController::class, 'arrears']);
+    });
+    Route::middleware('permission:accounting.manage')->group(function (): void {
+        Route::post('/payments', [PaymentController::class, 'store']);
+        Route::post('/payments/{payment}/cancel', [PaymentController::class, 'cancel']);
+        Route::put('/classes/{schoolClass}/fee', [FeeController::class, 'update']);
     });
 
     Route::middleware('permission:notifications.view')->group(function (): void {
@@ -113,8 +157,11 @@ Route::middleware(['auth:sanctum', 'account_type:staff'])->group(function (): vo
 Route::middleware(['auth:sanctum', 'account_type:parent'])->group(function (): void {
     Route::post('/parent/logout', [ParentAuthController::class, 'logout']);
     Route::get('/parent/me', [ParentAuthController::class, 'me']);
+    Route::put('/parent/me/password', [ParentAuthController::class, 'changePassword']);
     Route::get('/parent/bulletin', [BulletinController::class, 'mine']);
     Route::get('/parent/attendance', [AttendanceController::class, 'mine']);
     Route::get('/parent/summons', [SummonController::class, 'mine']);
     Route::get('/parent/sanctions', [SanctionController::class, 'mine']);
+    Route::get('/parent/tuition', [TuitionController::class, 'mine']);
+    Route::get('/parent/payments', [PaymentController::class, 'mine']);
 });

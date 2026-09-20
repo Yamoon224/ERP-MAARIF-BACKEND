@@ -2,7 +2,9 @@
 
 namespace App\Domains\Auth\Http\Controllers;
 
+use App\Domains\Auth\Http\Requests\ChangePasswordRequest;
 use App\Domains\Auth\Http\Requests\StaffLoginRequest;
+use App\Domains\Auth\Http\Requests\UpdateProfileRequest;
 use App\Domains\Auth\Http\Resources\AuthenticatedStaffResource;
 use App\Domains\Auth\Services\StaffAuthService;
 use App\Http\Controllers\Controller;
@@ -38,5 +40,17 @@ class StaffAuthController extends Controller
     public function me(Request $request): AuthenticatedStaffResource
     {
         return new AuthenticatedStaffResource($request->user());
+    }
+
+    public function updateProfile(UpdateProfileRequest $request): AuthenticatedStaffResource
+    {
+        return new AuthenticatedStaffResource($this->auth->updateProfile($request->user(), $request->validated()));
+    }
+
+    public function changePassword(ChangePasswordRequest $request): JsonResponse
+    {
+        $this->auth->changePassword($request->user(), $request->validated('current_password'), $request->validated('password'));
+
+        return response()->json(null, 204);
     }
 }
