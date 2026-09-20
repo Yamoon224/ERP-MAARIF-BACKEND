@@ -11,11 +11,16 @@ use App\Domains\Attendance\Enums\AttendanceStatus;
 use App\Domains\Discipline\Enums\SanctionType;
 use App\Domains\Discipline\Enums\SummonStatus;
 use App\Domains\Grades\Enums\GradeType;
+use App\Domains\Notifications\Enums\NotificationChannel;
+use App\Domains\Notifications\Enums\NotificationStatus;
+use App\Domains\Notifications\Enums\NotificationType;
+use App\Domains\Notifications\Services\GuardianNotifier;
 use App\Domains\Results\Services\PromotionService;
 use App\Domains\Results\Services\ResultsService;
 use App\Models\AttendanceRecord;
 use App\Models\Enrollment;
 use App\Models\Grade;
+use App\Models\NotificationLog;
 use App\Models\Sanction;
 use App\Models\SchoolClass;
 use App\Models\Student;
@@ -72,6 +77,7 @@ class DemoDataSeeder extends Seeder
         $this->recordActivity($students->concat($newcomers), $currentYear['terms'], $subjects, $teacher, $admin);
         $this->recordPayments($students->concat($newcomers), $currentYear['label'], $accountant);
 
+        $this->recordFailedNotification($newcomers->first());
         $this->createAdmissions($currentYear['label'], $currentClass6, $admin);
     }
 
@@ -237,15 +243,20 @@ class DemoDataSeeder extends Seeder
                 }
             }
 
-            $student = $students->random();
-            Sanction::create([
-                'student_id' => $student->id,
+            // Comme en production, la creation previent le tuteur : le journal des
+            // notifications a ainsi des convocations et des sanctions a montrer.
+            $notifier = app(GuardianNotifier::class);
+
+            $sanction = Sanction::create([
+                'student_id' => $students->random()->id,
                 'type' => SanctionType::Warning,
                 'reason' => 'Bavardages repetes en classe',
                 'start_date' => $term->starts_at->copy()->addDays(fake()->numberBetween(0, $span))->toDateString(),
                 'created_by' => $admin->id,
             ]);
-            Summon::create([
+            $sanction->update(['notified_at' => $notifier->notifySanction($sanction)->sent_at]);
+
+            $summon = Summon::create([
                 'student_id' => $students->random()->id,
                 'reason' => 'Resultats en baisse',
                 'scheduled_at' => $term->starts_at->copy()->addDays(fake()->numberBetween(0, $span))->setTime(9, 0),
@@ -253,7 +264,23 @@ class DemoDataSeeder extends Seeder
                 'status' => SummonStatus::Done,
                 'created_by' => $admin->id,
             ]);
+            $summon->update(['notified_at' => $notifier->notifySummon($summon)->sent_at]);
         }
+    }
+
+    /** Un message en echec, pour que le journal montre aussi ce cas : un SMS que l'operateur a refuse. */
+    private function recordFailedNotification(Student $student): void
+    {
+        NotificationLog::create([
+            'student_id' => $student->id,
+            'channel' => NotificationChannel::Sms,
+            'type' => NotificationType::Summon,
+            'recipient' => $student->guardian_phone,
+            'subject' => 'Convocation - '.$student->fullName(),
+            'body' => 'Convocation pour '.$student->fullName().'. Motif : Resultats en baisse.',
+            'status' => NotificationStatus::Failed,
+            'error' => 'Operateur SMS indisponible',
+        ]);
     }
 
     /**

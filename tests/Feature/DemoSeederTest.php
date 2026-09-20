@@ -3,9 +3,12 @@
 namespace Tests\Feature;
 
 use App\Domains\Admissions\Enums\AdmissionStatus;
+use App\Domains\Notifications\Enums\NotificationStatus;
+use App\Domains\Notifications\Enums\NotificationType;
 use App\Domains\Results\Enums\PromotionDecisionType;
 use App\Models\AdmissionApplication;
 use App\Models\Enrollment;
+use App\Models\NotificationLog;
 use App\Models\Payment;
 use App\Models\PromotionDecision;
 use App\Models\Term;
@@ -46,7 +49,14 @@ class DemoSeederTest extends TestCase
             AdmissionApplication::where('status', AdmissionStatus::Rejected)->whereNotNull('decision_note')->count(),
         );
 
+        // Le journal des notifications a de quoi montrer : convocations et sanctions envoyees, un echec, et les admissions.
+        $this->assertGreaterThan(0, NotificationLog::where('type', NotificationType::Summon)->where('status', NotificationStatus::Sent)->count());
+        $this->assertGreaterThan(0, NotificationLog::where('type', NotificationType::Sanction)->count());
+        $this->assertSame(1, NotificationLog::where('status', NotificationStatus::Failed)->count());
+        $this->assertSame(4, NotificationLog::where('type', NotificationType::Admission)->count());
+
         $admin = User::where('email', 'admin@maarif.test')->firstOrFail();
+        $this->actingAs($admin)->getJson('/api/notification-logs/summary')->assertOk()->assertJsonPath('data.by_status.failed', 1);
         $this->actingAs($admin)->getJson('/api/dashboard')->assertOk();
         $this->actingAs($admin)->getJson('/api/accounting/summary')->assertOk();
     }
