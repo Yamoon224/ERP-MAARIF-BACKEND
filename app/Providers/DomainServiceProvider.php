@@ -4,9 +4,11 @@ namespace App\Providers;
 
 use App\Domains\Academics\Contracts\SchoolClassRepositoryContract;
 use App\Domains\Academics\Contracts\SubjectRepositoryContract;
+use App\Domains\Academics\Contracts\TeachingAssignmentRepositoryContract;
 use App\Domains\Academics\Contracts\TermRepositoryContract;
 use App\Domains\Academics\Repositories\EloquentSchoolClassRepository;
 use App\Domains\Academics\Repositories\EloquentSubjectRepository;
+use App\Domains\Academics\Repositories\EloquentTeachingAssignmentRepository;
 use App\Domains\Academics\Repositories\EloquentTermRepository;
 use App\Domains\Accounting\Contracts\AccountingReportRepositoryContract;
 use App\Domains\Accounting\Contracts\InstallmentRepositoryContract;
@@ -70,6 +72,7 @@ class DomainServiceProvider extends ServiceProvider
         SchoolClassRepositoryContract::class => EloquentSchoolClassRepository::class,
         SubjectRepositoryContract::class => EloquentSubjectRepository::class,
         TermRepositoryContract::class => EloquentTermRepository::class,
+        TeachingAssignmentRepositoryContract::class => EloquentTeachingAssignmentRepository::class,
 
         GradeRepositoryContract::class => EloquentGradeRepository::class,
         AttendanceRepositoryContract::class => EloquentAttendanceRepository::class,
