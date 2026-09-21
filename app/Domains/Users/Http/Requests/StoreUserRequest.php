@@ -23,7 +23,7 @@ class StoreUserRequest extends FormRequest
             'password' => ['required', Password::min(8)],
             'is_active' => ['nullable', 'boolean'],
             'roles' => ['required', 'array', 'min:1'],
-            'roles.*' => ['string', Rule::in(['admin', 'teacher', 'accountant'])],
+            'roles.*' => ['string', Rule::exists('roles', 'name')->where('guard_name', 'web')],
         ];
     }
 }

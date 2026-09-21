@@ -25,7 +25,7 @@ class UpdateUserRequest extends FormRequest
             'password' => ['nullable', Password::min(8)],
             'is_active' => ['nullable', 'boolean'],
             'roles' => ['sometimes', 'array', 'min:1'],
-            'roles.*' => ['string', Rule::in(['admin', 'teacher', 'accountant'])],
+            'roles.*' => ['string', Rule::exists('roles', 'name')->where('guard_name', 'web')],
         ];
     }
 }

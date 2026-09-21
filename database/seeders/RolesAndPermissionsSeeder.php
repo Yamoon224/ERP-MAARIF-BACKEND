@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Domains\Roles\Support\PermissionCatalog;
 use App\Models\Permission;
 use App\Models\Role;
 use Illuminate\Database\Seeder;
@@ -11,48 +12,25 @@ use Spatie\Permission\PermissionRegistrar;
  * Roles et permissions de la plateforme (cahier des charges 3.1 : "gestion
  * des droits d'acces").
  *
- * Trois roles pour le personnel : l'administrateur gere les comptes, la
- * structure de l'etablissement et la discipline ; l'enseignant se limite aux
- * eleves, aux notes et aux presences ; le comptable encaisse la scolarite et
- * suit les impayes sans acces aux notes ni a la discipline. Les parents ne
- * sont pas concernes par
- * ce systeme de roles : ils sont des `Student` authentifie, jamais des
- * `User` (voir App\Models\Student).
+ * Trois roles pour le personnel : l'administrateur gere les comptes, les
+ * roles, la structure de l'etablissement et la discipline ; l'enseignant se
+ * limite aux eleves, aux notes et aux presences ; le comptable encaisse la
+ * scolarite et suit les impayes sans acces aux notes ni a la discipline. Les
+ * parents ne sont pas concernes par ce systeme de roles : ils sont des
+ * `Student` authentifie, jamais des `User` (voir App\Models\Student).
  *
- * Ce seeder est la source de verite des droits : ils ne se modifient pas en
- * production via une interface, pour qu'une matrice de permissions reste
- * lisible et versionnee.
+ * Les permissions existent parce que le code les exige (voir
+ * PermissionCatalog) ; leur attribution aux roles, elle, est ensuite reglable
+ * par l'administrateur depuis l'ecran des roles. Ce seeder ne fait donc que
+ * poser les valeurs de depart : il n'ecrase plus les droits d'un role deja
+ * cree, sinon chaque deploiement annulerait le travail de l'administrateur.
+ * Seul `admin` est toujours remis a jour avec l'integralite des permissions,
+ * pour qu'une permission ajoutee au code lui soit acquise.
  */
 class RolesAndPermissionsSeeder extends Seeder
 {
     /**
-     * Permission => raison d'etre.
-     *
-     * @var array<string, string>
-     */
-    private const PERMISSIONS = [
-        'users.manage' => 'Creer, modifier et desactiver les comptes du personnel.',
-        'academics.view' => 'Consulter les classes, matieres et trimestres.',
-        'academics.manage' => 'Administrer les classes, matieres et trimestres.',
-        'students.view' => 'Consulter le dossier des eleves et leurs bulletins.',
-        'students.manage' => 'Inscrire, modifier et desactiver un eleve.',
-        'grades.manage' => 'Saisir et modifier les notes.',
-        'attendance.manage' => 'Saisir les presences et absences.',
-        'discipline.manage' => 'Creer des convocations et des sanctions.',
-        'notifications.view' => 'Consulter le journal des notifications envoyees aux tuteurs.',
-        'notifications.manage' => 'Renvoyer un message en echec depuis le journal des notifications.',
-        'accounting.view' => 'Consulter les paiements de scolarite, les releves et les impayes.',
-        'accounting.manage' => 'Encaisser et annuler des paiements, fixer les frais de scolarite des classes.',
-        'expenses.view' => "Consulter les depenses et approvisionnements de l'etablissement.",
-        'expenses.manage' => 'Saisir, corriger et annuler les depenses, gerer les categories de depenses.',
-        'admissions.view' => "Consulter les candidatures d'admission.",
-        'admissions.manage' => "Deposer, instruire et transformer en inscription les candidatures d'admission.",
-        'results.view' => 'Consulter les resultats par trimestre, semestre et annee.',
-        'results.manage' => "Valider ou corriger les decisions de passage de fin d'annee.",
-    ];
-
-    /**
-     * Role => permissions.
+     * Role => permissions de depart.
      *
      * @var array<string, list<string>>
      */
@@ -66,15 +44,20 @@ class RolesAndPermissionsSeeder extends Seeder
     {
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        $permissions = collect(self::PERMISSIONS)->keys()->mapWithKeys(
+        $permissions = collect(PermissionCatalog::PERMISSIONS)->keys()->mapWithKeys(
             fn (string $name) => [$name => Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web'])],
         );
 
         foreach (self::ROLES as $roleName => $rolePermissions) {
             $role = Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
+            $isAdmin = $rolePermissions === ['*'];
+
+            if (! $isAdmin && ! $role->wasRecentlyCreated) {
+                continue;
+            }
 
             $role->syncPermissions(
-                $rolePermissions === ['*'] ? $permissions->values() : $permissions->only($rolePermissions)->values(),
+                $isAdmin ? $permissions->values() : $permissions->only($rolePermissions)->values(),
             );
         }
     }

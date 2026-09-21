@@ -26,6 +26,9 @@ use App\Domains\Notifications\Http\Controllers\NotificationLogController;
 use App\Domains\Reporting\Http\Controllers\DashboardController;
 use App\Domains\Reporting\Http\Controllers\TermOverviewController;
 use App\Domains\Results\Http\Controllers\ResultsController;
+use App\Domains\Roles\Http\Controllers\PermissionController;
+use App\Domains\Roles\Http\Controllers\RoleController;
+use App\Domains\Roles\Http\Controllers\RolePermissionController;
 use App\Domains\Shared\Http\Controllers\HealthController;
 use App\Domains\Students\Http\Controllers\EnrollmentController;
 use App\Domains\Students\Http\Controllers\StudentController;
@@ -86,6 +89,18 @@ Route::middleware(['auth:sanctum', 'account_type:staff'])->group(function (): vo
         Route::apiResource('users', UserController::class);
     });
 
+    // Roles et permissions. La liste des roles est aussi ouverte a qui gere
+    // les comptes (il doit pouvoir en attribuer un) ; tout le reste, y compris
+    // l'attribution et le retrait des permissions, exige `roles.manage`.
+    Route::get('/roles', [RoleController::class, 'index'])->middleware('permission:roles.manage|users.manage');
+    Route::middleware('permission:roles.manage')->group(function (): void {
+        Route::get('/permissions', [PermissionController::class, 'index']);
+        Route::apiResource('roles', RoleController::class)->except(['index']);
+        Route::put('/roles/{role}/permissions', [RolePermissionController::class, 'sync']);
+        Route::post('/roles/{role}/permissions', [RolePermissionController::class, 'attach']);
+        Route::delete('/roles/{role}/permissions/{permission}', [RolePermissionController::class, 'detach']);
+    });
+
     // Consultation ouverte a tout le personnel : necessaire aux ecrans de
     // saisie de notes et de presences (choix de la classe, de la matiere, du
     // trimestre). Seule la modification de la structure est reservee a
@@ -119,6 +134,7 @@ Route::middleware(['auth:sanctum', 'account_type:staff'])->group(function (): vo
         Route::get('/students', [StudentController::class, 'index']);
         Route::get('/students/{student}', [StudentController::class, 'show']);
         Route::get('/students/{student}/bulletin', [BulletinController::class, 'forStudent']);
+        Route::get('/students/{student}/bulletin/export', [BulletinController::class, 'exportForStudent']);
         Route::get('/students/{student}/enrollments', [EnrollmentController::class, 'index']);
     });
     Route::middleware('permission:students.manage')->group(function (): void {
@@ -229,6 +245,7 @@ Route::middleware(['auth:sanctum', 'account_type:parent'])->group(function (): v
     Route::get('/parent/academic-years', [AcademicYearController::class, 'index']);
     Route::put('/parent/me/password', [ParentAuthController::class, 'changePassword']);
     Route::get('/parent/bulletin', [BulletinController::class, 'mine']);
+    Route::get('/parent/bulletin/export', [BulletinController::class, 'exportMine']);
     Route::get('/parent/results', [ResultsController::class, 'mine']);
     Route::get('/parent/attendance', [AttendanceController::class, 'mine']);
     Route::get('/parent/summons', [SummonController::class, 'mine']);

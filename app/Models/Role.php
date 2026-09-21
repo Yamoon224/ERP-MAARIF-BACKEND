@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Spatie\Permission\Models\Role as SpatieRole;
+use Spatie\Permission\PermissionRegistrar;
 
 /**
  * Role applicatif, etendu pour porter une cle primaire UUID comme le reste du
@@ -15,4 +17,26 @@ use Spatie\Permission\Models\Role as SpatieRole;
 class Role extends SpatieRole
 {
     use HasUuids;
+
+    /**
+     * Comptes du personnel qui portent ce role.
+     *
+     * Redefinie parce que la version du paquet deduit le modele du garde par
+     * defaut de l'application, et que ce garde vaut `sanctum` (ou `null` en
+     * test) des qu'une requete est authentifiee : le modele ne se retrouve
+     * alors plus, et compter les comptes d'un role echouerait. Seuls les
+     * `User` portent des roles (voir App\Models\Student).
+     *
+     * @return BelongsToMany<User, $this>
+     */
+    public function users(): BelongsToMany
+    {
+        return $this->morphedByMany(
+            User::class,
+            'model',
+            config('permission.table_names.model_has_roles'),
+            app(PermissionRegistrar::class)->pivotRole,
+            config('permission.column_names.model_morph_key'),
+        );
+    }
 }

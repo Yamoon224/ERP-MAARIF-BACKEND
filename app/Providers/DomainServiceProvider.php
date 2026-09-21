@@ -44,6 +44,8 @@ use App\Domains\Notifications\Senders\ArrayNotificationSender;
 use App\Domains\Notifications\Senders\LogNotificationSender;
 use App\Domains\Results\Contracts\PromotionDecisionRepositoryContract;
 use App\Domains\Results\Repositories\EloquentPromotionDecisionRepository;
+use App\Domains\Roles\Contracts\RoleRepositoryContract;
+use App\Domains\Roles\Repositories\EloquentRoleRepository;
 use App\Domains\Students\Contracts\EnrollmentRepositoryContract;
 use App\Domains\Students\Contracts\StudentRepositoryContract;
 use App\Domains\Students\Observers\StudentEnrollmentObserver;
@@ -70,6 +72,7 @@ class DomainServiceProvider extends ServiceProvider
     /** @var array<class-string, class-string> */
     public array $bindings = [
         UserRepositoryContract::class => EloquentUserRepository::class,
+        RoleRepositoryContract::class => EloquentRoleRepository::class,
         StudentRepositoryContract::class => EloquentStudentRepository::class,
         EnrollmentRepositoryContract::class => EloquentEnrollmentRepository::class,
 
