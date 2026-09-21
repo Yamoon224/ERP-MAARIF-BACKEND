@@ -3,6 +3,7 @@
 use App\Domains\Academics\Http\Controllers\AcademicYearController;
 use App\Domains\Academics\Http\Controllers\SchoolClassController;
 use App\Domains\Academics\Http\Controllers\SubjectController;
+use App\Domains\Academics\Http\Controllers\TeachingAssignmentController;
 use App\Domains\Academics\Http\Controllers\TermController;
 use App\Domains\Accounting\Http\Controllers\AccountingReportController;
 use App\Domains\Accounting\Http\Controllers\FeeController;
@@ -91,6 +92,8 @@ Route::middleware(['auth:sanctum', 'account_type:staff'])->group(function (): vo
         Route::get('/academic-years', [AcademicYearController::class, 'index']);
         Route::get('/classes', [SchoolClassController::class, 'index']);
         Route::get('/classes/{schoolClass}', [SchoolClassController::class, 'show']);
+        Route::get('/classes/{schoolClass}/subjects', [TeachingAssignmentController::class, 'index']);
+        Route::get('/me/assignments', [TeachingAssignmentController::class, 'mine']);
         Route::get('/subjects', [SubjectController::class, 'index']);
         Route::get('/subjects/{subject}', [SubjectController::class, 'show']);
         Route::get('/terms', [TermController::class, 'all']);
@@ -104,6 +107,8 @@ Route::middleware(['auth:sanctum', 'account_type:staff'])->group(function (): vo
         Route::apiResource('classes', SchoolClassController::class)
             ->parameters(['classes' => 'schoolClass'])
             ->except(['index', 'show']);
+        Route::put('/classes/{schoolClass}/subjects/{subject}', [TeachingAssignmentController::class, 'update']);
+        Route::delete('/classes/{schoolClass}/subjects/{subject}', [TeachingAssignmentController::class, 'destroy']);
         Route::apiResource('subjects', SubjectController::class)->except(['index', 'show']);
         Route::apiResource('terms', TermController::class)->except(['index', 'show']);
     });

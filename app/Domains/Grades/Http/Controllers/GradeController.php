@@ -33,7 +33,7 @@ class GradeController extends Controller
 
     public function store(StoreGradeRequest $request): JsonResponse
     {
-        $grade = $this->grades->record($request->validated(), $request->user()->id);
+        $grade = $this->grades->record($request->validated(), $request->user());
 
         return (new GradeResource($grade->load(['student', 'subject', 'term'])))->response()->setStatusCode(201);
     }
@@ -45,12 +45,12 @@ class GradeController extends Controller
 
     public function update(UpdateGradeRequest $request, Grade $grade): GradeResource
     {
-        return new GradeResource($this->grades->update($grade, $request->validated())->load(['student', 'subject', 'term']));
+        return new GradeResource($this->grades->update($grade, $request->validated(), $request->user())->load(['student', 'subject', 'term']));
     }
 
-    public function destroy(Grade $grade): Response
+    public function destroy(Request $request, Grade $grade): Response
     {
-        $this->grades->delete($grade);
+        $this->grades->delete($grade, $request->user());
 
         return response()->noContent();
     }

@@ -2,8 +2,8 @@
 
 namespace App\Domains\Academics\Http\Requests;
 
+use App\Domains\Academics\Rules\IsTeacher;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class UpdateSchoolClassRequest extends FormRequest
 {
@@ -20,7 +20,7 @@ class UpdateSchoolClassRequest extends FormRequest
             'level' => ['sometimes', 'required', 'string', 'max:100'],
             'academic_year' => ['sometimes', 'required', 'string', 'regex:/^\d{4}-\d{4}$/'],
             'monthly_fee' => ['nullable', 'numeric', 'min:0', 'max:999999999'],
-            'main_teacher_id' => ['nullable', 'uuid', Rule::exists('users', 'id')],
+            'main_teacher_id' => ['nullable', 'uuid', new IsTeacher],
         ];
     }
 }

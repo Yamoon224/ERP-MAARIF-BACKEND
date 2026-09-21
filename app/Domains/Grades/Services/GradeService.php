@@ -2,13 +2,18 @@
 
 namespace App\Domains\Grades\Services;
 
+use App\Domains\Academics\Services\TeachingAssignmentService;
 use App\Domains\Grades\Contracts\GradeRepositoryContract;
 use App\Models\Grade;
+use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 final class GradeService
 {
-    public function __construct(private readonly GradeRepositoryContract $grades) {}
+    public function __construct(
+        private readonly GradeRepositoryContract $grades,
+        private readonly TeachingAssignmentService $assignments,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $filters
@@ -24,20 +29,32 @@ final class GradeService
         return $this->grades->findOrFail($id);
     }
 
-    /** @param  array<string, mixed>  $data */
-    public function record(array $data, string $teacherId): Grade
+    /**
+     * Un enseignant ne saisit que dans ses matières et ses classes (voir
+     * TeachingAssignmentService::assertMayGrade), il en va de même pour la
+     * correction et la suppression d'une note.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function record(array $data, User $author): Grade
     {
-        return $this->grades->create([...$data, 'teacher_id' => $teacherId]);
+        $this->assignments->assertMayGrade($author, $data['student_id'], $data['subject_id'], $data['term_id']);
+
+        return $this->grades->create([...$data, 'teacher_id' => $author->id]);
     }
 
     /** @param  array<string, mixed>  $data */
-    public function update(Grade $grade, array $data): Grade
+    public function update(Grade $grade, array $data, User $actor): Grade
     {
+        $this->assignments->assertMayGrade($actor, $grade->student_id, $grade->subject_id, $grade->term_id);
+
         return $this->grades->update($grade, $data);
     }
 
-    public function delete(Grade $grade): void
+    public function delete(Grade $grade, User $actor): void
     {
+        $this->assignments->assertMayGrade($actor, $grade->student_id, $grade->subject_id, $grade->term_id);
+
         $this->grades->delete($grade);
     }
 }
