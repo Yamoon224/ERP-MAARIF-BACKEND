@@ -86,6 +86,7 @@ Route::middleware(['auth:sanctum', 'account_type:staff'])->group(function (): vo
     Route::get('/dashboard', DashboardController::class);
 
     Route::middleware('permission:users.manage')->group(function (): void {
+        Route::post('/users/{user}/reset-password', [UserController::class, 'resetPassword']);
         Route::apiResource('users', UserController::class);
     });
 

@@ -2,11 +2,13 @@
 
 namespace App\Domains\Users\Http\Controllers;
 
+use App\Domains\Users\Http\Requests\ResetUserPasswordRequest;
 use App\Domains\Users\Http\Requests\StoreUserRequest;
 use App\Domains\Users\Http\Requests\UpdateUserRequest;
 use App\Domains\Users\Http\Resources\UserResource;
 use App\Domains\Users\Services\UserService;
 use App\Http\Controllers\Controller;
+use App\Models\PersonalAccessToken;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -51,6 +53,20 @@ class UserController extends Controller
         $roles = $request->input('roles');
 
         return new UserResource($this->users->update($user, $data, $roles)->load('roles'));
+    }
+
+    /** Nouveau mot de passe choisi par l'administrateur ; les sessions du compte sont fermees. */
+    public function resetPassword(ResetUserPasswordRequest $request, User $user): Response
+    {
+        $current = $request->user()?->currentAccessToken();
+
+        $this->users->resetPassword(
+            $user,
+            $request->string('password')->toString(),
+            $current instanceof PersonalAccessToken && $request->user()?->id === $user->id ? $current : null,
+        );
+
+        return response()->noContent();
     }
 
     public function destroy(Request $request, User $user): Response

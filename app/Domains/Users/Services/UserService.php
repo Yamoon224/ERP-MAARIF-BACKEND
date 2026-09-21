@@ -4,6 +4,7 @@ namespace App\Domains\Users\Services;
 
 use App\Domains\Users\Contracts\UserRepositoryContract;
 use App\Domains\Users\Exceptions\UserNotDeletableException;
+use App\Models\PersonalAccessToken;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -68,6 +69,22 @@ final class UserService
             }
 
             return $updated->refresh();
+        });
+    }
+
+    /**
+     * Definit un nouveau mot de passe a un compte (oubli, depart d'un poste...) et ferme ses sessions : celui qui
+     * connaissait l'ancien mot de passe ne doit pas rester connecte. Si l'administrateur reinitialise le sien,
+     * sa session courante est conservee.
+     */
+    public function resetPassword(User $user, string $newPassword, ?PersonalAccessToken $keep = null): void
+    {
+        DB::transaction(function () use ($user, $newPassword, $keep): void {
+            $user->update(['password' => $newPassword]);
+
+            $user->tokens()
+                ->when($keep !== null, fn ($tokens) => $tokens->where('id', '!=', $keep->id))
+                ->delete();
         });
     }
 
