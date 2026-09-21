@@ -81,25 +81,62 @@ final class PaymentService
                 throw AccountingException::nothingToPay();
             }
 
-            $paidAt = $data['paid_at'] ?? today()->toDateString();
-
-            $payment = $this->payments->create([
-                'receipt_number' => $this->receipts->next(Carbon::now()),
-                'enrollment_id' => $enrollment->id,
-                'period_type' => $period->value,
-                'months' => $selected->map(fn (TuitionInstallment $i) => $i->month->format('Y-m'))->values()->all(),
-                'amount' => $this->total($selected),
-                'method' => $data['method'],
-                'reference' => $data['reference'] ?? null,
-                'paid_at' => $paidAt,
-                'note' => $data['note'] ?? null,
-                'received_by' => $receivedByUserId,
-            ]);
-
-            $this->installments->assignToPayment($selected->pluck('id')->all(), $payment->id);
-
-            return $this->payments->findOrFail($payment->id);
+            return $this->record($enrollment, $period, $selected, $data, $receivedByUserId);
         });
+    }
+
+    /**
+     * Enregistre un paiement pour des mois précis, et non "les N plus anciens" :
+     * c'est le cas d'un paiement confirmé après coup (mobile money), dont les
+     * mois et le montant ont été figés à l'initiation. Si l'un de ces mois a été
+     * réglé entre-temps, ou si le tarif a changé, rien n'est enregistré.
+     *
+     * @param  list<string>  $months  au format `YYYY-MM`
+     * @param  array<string, mixed>  $data  method, reference, paid_at, note
+     */
+    public function registerMonths(Enrollment $enrollment, PaymentPeriod $period, array $months, float $expectedAmount, array $data, ?string $receivedByUserId = null): Payment
+    {
+        $this->tuition->ensureInstallments($enrollment);
+
+        return DB::transaction(function () use ($enrollment, $period, $months, $expectedAmount, $data, $receivedByUserId): Payment {
+            $selected = $this->installments->unpaidForEnrollment($enrollment->id, lock: true)
+                ->filter(fn (TuitionInstallment $i) => in_array($i->month->format('Y-m'), $months, true))
+                ->values();
+
+            if ($selected->count() !== count($months)) {
+                throw AccountingException::monthsAlreadySettled();
+            }
+
+            if (abs($this->total($selected) - $expectedAmount) > 0.005) {
+                throw AccountingException::amountChanged();
+            }
+
+            return $this->record($enrollment, $period, $selected, $data, $receivedByUserId);
+        });
+    }
+
+    /**
+     * @param  Collection<int, TuitionInstallment>  $selected
+     * @param  array<string, mixed>  $data
+     */
+    private function record(Enrollment $enrollment, PaymentPeriod $period, Collection $selected, array $data, ?string $receivedByUserId): Payment
+    {
+        $payment = $this->payments->create([
+            'receipt_number' => $this->receipts->next(Carbon::now()),
+            'enrollment_id' => $enrollment->id,
+            'period_type' => $period->value,
+            'months' => $selected->map(fn (TuitionInstallment $i) => $i->month->format('Y-m'))->values()->all(),
+            'amount' => $this->total($selected),
+            'method' => $data['method'],
+            'reference' => $data['reference'] ?? null,
+            'paid_at' => $data['paid_at'] ?? today()->toDateString(),
+            'note' => $data['note'] ?? null,
+            'received_by' => $receivedByUserId,
+        ]);
+
+        $this->installments->assignToPayment($selected->pluck('id')->all(), $payment->id);
+
+        return $this->payments->findOrFail($payment->id);
     }
 
     /** Annule un paiement : ses mois redeviennent a payer, le recu reste consultable. */

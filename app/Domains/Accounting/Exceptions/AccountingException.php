@@ -14,6 +14,16 @@ final class AccountingException extends DomainException
         );
     }
 
+    public static function monthsAlreadySettled(): self
+    {
+        return new self('Certains des mois visés par ce paiement ont déjà été réglés entre-temps.', 'months_already_settled', 409);
+    }
+
+    public static function amountChanged(): self
+    {
+        return new self('Les frais de scolarité ont changé depuis la demande : le montant encaissé ne correspond plus aux mois visés.', 'tuition_amount_changed', 409);
+    }
+
     public static function alreadyCancelled(): self
     {
         return new self('Ce paiement est deja annule.', 'payment_already_cancelled', 409);
