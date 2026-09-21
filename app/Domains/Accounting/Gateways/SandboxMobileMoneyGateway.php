@@ -34,7 +34,7 @@ final class SandboxMobileMoneyGateway implements MobileMoneyGatewayContract
         }
 
         $delay = (int) config('mobile_money.sandbox_delay_seconds', 4);
-        $confirmed = $lastDigits !== '99' && $transaction->created_at->copy()->addSeconds($delay)->isPast();
+        $confirmed = $lastDigits !== '99' && ! $transaction->created_at->copy()->addSeconds($delay)->isFuture();
 
         return new MobileMoneyResult($confirmed ? MobileMoneyStatus::Successful : MobileMoneyStatus::Pending, $reference);
     }

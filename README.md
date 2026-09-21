@@ -32,6 +32,7 @@ Domains/<Domaine>/
 | `Attendance` | Presences, **appel de classe**, absences, retards, justification |
 | `Discipline` | Convocations et sanctions, avec notification automatique du tuteur |
 | `Accounting` | **Scolarite mensuelle**, paiements (mois, trimestre, semestre, annee), recus, impayes |
+| `Expenses` | **Depenses et approvisionnements** (craies, registres, factures...) : numero `DEP-annee-sequence`, montant = quantite x prix unitaire, categories, annulation avec motif, bilan par categorie / mode / mois |
 | `Reporting` | Tableau de bord et detail d'un trimestre (agregats sur plusieurs domaines) |
 | `Notifications` | Envoi e-mail/SMS au tuteur, journalise dans `notification_logs` |
 
@@ -45,6 +46,8 @@ Deux types de comptes, un seul mecanisme de jeton (Sanctum) :
 **Se souvenir de moi.** Les deux `login` acceptent `remember` (booleen). Le jeton expire au bout de 12 h sans la case cochee, de 30 jours avec (`AUTH_TOKEN_TTL_MINUTES` / `AUTH_REMEMBERED_TOKEN_TTL_MINUTES`, voir `config/auth.php`).
 
 **Mot de passe oublie.** `POST /api/forgot-password` (`email`) et `POST /api/parent/forgot-password` (`matricule`) envoient un lien a usage unique, valable 60 minutes : par e-mail au compte du personnel, au tuteur de l'eleve (e-mail, sinon SMS) pour un parent. La reponse est identique que le compte existe ou non, et le lien ne part jamais dans le journal des notifications. `POST /api/reset-password` et `POST /api/parent/reset-password` (`token`, `email` ou `matricule`, `password`, `password_confirmation`) choisissent le nouveau mot de passe et ferment toutes les sessions. Le lien pointe vers l'interface (`FRONTEND_URL`), pas vers l'API. En developpement (`MAIL_MAILER=log`), le lien se lit dans `storage/logs/laravel.log`.
+
+**Depenses.** `GET/POST /api/expenses`, `PUT /api/expenses/{id}`, `POST /api/expenses/{id}/cancel` (le montant est calcule cote serveur ; une depense annulee sort des totaux mais reste au registre), `GET /api/expenses/summary` (filtres de periode ; une annee entiere va du 1er septembre au 31 aout pour inclure les achats de rentree), `GET /api/expenses/suppliers` (saisie semi-automatique), `/api/expense-categories` (liste, creation, renommage, desactivation ; une categorie utilisee ne se supprime pas). Permissions `expenses.view` / `expenses.manage` (administrateur et comptable) ; apres mise a jour : `php artisan migrate`, puis `db:seed --class=RolesAndPermissionsSeeder` et `--class=ExpenseCategorySeeder`.
 
 ### Annee scolaire, trimestres, filtres
 

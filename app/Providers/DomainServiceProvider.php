@@ -12,12 +12,16 @@ use App\Domains\Academics\Repositories\EloquentTeachingAssignmentRepository;
 use App\Domains\Academics\Repositories\EloquentTermRepository;
 use App\Domains\Accounting\Contracts\AccountingReportRepositoryContract;
 use App\Domains\Accounting\Contracts\InstallmentRepositoryContract;
+use App\Domains\Accounting\Contracts\MobileMoneyGatewayContract;
+use App\Domains\Accounting\Contracts\MobileMoneyRepositoryContract;
 use App\Domains\Accounting\Contracts\PaymentRepositoryContract;
 use App\Domains\Accounting\Observers\EnrollmentTuitionObserver;
 use App\Domains\Accounting\Observers\SchoolClassFeeObserver;
 use App\Domains\Accounting\Observers\TermCalendarObserver;
 use App\Domains\Accounting\Repositories\EloquentAccountingReportRepository;
+use App\Domains\Accounting\Gateways\SandboxMobileMoneyGateway;
 use App\Domains\Accounting\Repositories\EloquentInstallmentRepository;
+use App\Domains\Accounting\Repositories\EloquentMobileMoneyRepository;
 use App\Domains\Accounting\Repositories\EloquentPaymentRepository;
 use App\Domains\Admissions\Contracts\AdmissionRepositoryContract;
 use App\Domains\Admissions\Repositories\EloquentAdmissionRepository;
@@ -82,6 +86,7 @@ class DomainServiceProvider extends ServiceProvider
 
         PaymentRepositoryContract::class => EloquentPaymentRepository::class,
         InstallmentRepositoryContract::class => EloquentInstallmentRepository::class,
+        MobileMoneyRepositoryContract::class => EloquentMobileMoneyRepository::class,
         AccountingReportRepositoryContract::class => EloquentAccountingReportRepository::class,
 
         ExpenseRepositoryContract::class => EloquentExpenseRepository::class,
@@ -95,6 +100,7 @@ class DomainServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->registerNotificationSender();
+        $this->registerMobileMoneyGateway();
     }
 
     public function boot(): void
@@ -125,6 +131,23 @@ class DomainServiceProvider extends ServiceProvider
             return match ($driver) {
                 'array' => $this->app->make(ArrayNotificationSender::class),
                 default => $this->app->make(LogNotificationSender::class),
+            };
+        });
+    }
+
+    /**
+     * Passerelle de mobile money, choisie par configuration. Seul le
+     * simulateur existe pour l'instant : un opérateur réel se branche en
+     * ajoutant un cas ici (voir config/mobile_money.php).
+     */
+    private function registerMobileMoneyGateway(): void
+    {
+        $this->app->bind(MobileMoneyGatewayContract::class, function (): MobileMoneyGatewayContract {
+            $driver = config('mobile_money.driver', 'sandbox');
+
+            return match ($driver) {
+                'sandbox' => $this->app->make(SandboxMobileMoneyGateway::class),
+                default => throw new \InvalidArgumentException("Passerelle mobile money inconnue : {$driver}"),
             };
         });
     }

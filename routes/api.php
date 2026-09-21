@@ -7,6 +7,8 @@ use App\Domains\Academics\Http\Controllers\TeachingAssignmentController;
 use App\Domains\Academics\Http\Controllers\TermController;
 use App\Domains\Accounting\Http\Controllers\AccountingReportController;
 use App\Domains\Accounting\Http\Controllers\FeeController;
+use App\Domains\Accounting\Http\Controllers\MobileMoneyController;
+use App\Domains\Accounting\Http\Controllers\ParentMobileMoneyController;
 use App\Domains\Accounting\Http\Controllers\PaymentController;
 use App\Domains\Accounting\Http\Controllers\TuitionController;
 use App\Domains\Admissions\Http\Controllers\AdmissionController;
@@ -176,6 +178,7 @@ Route::middleware(['auth:sanctum', 'account_type:staff'])->group(function (): vo
     Route::middleware('permission:accounting.view')->group(function (): void {
         Route::get('/payments', [PaymentController::class, 'index']);
         Route::get('/payments/{payment}', [PaymentController::class, 'show']);
+        Route::get('/mobile-money-transactions', [MobileMoneyController::class, 'index']);
         Route::get('/enrollments/{enrollment}/tuition', [TuitionController::class, 'show']);
         Route::get('/enrollments/{enrollment}/payment-preview', [TuitionController::class, 'preview']);
         Route::get('/accounting/summary', [AccountingReportController::class, 'summary']);
@@ -232,4 +235,12 @@ Route::middleware(['auth:sanctum', 'account_type:parent'])->group(function (): v
     Route::get('/parent/sanctions', [SanctionController::class, 'mine']);
     Route::get('/parent/tuition', [TuitionController::class, 'mine']);
     Route::get('/parent/payments', [PaymentController::class, 'mine']);
+
+    // Paiement de la scolarite par mobile money : le parent lance la demande,
+    // l'operateur la confirme, et le paiement (avec son recu) n'est cree qu'a
+    // la confirmation. Le sondage (`show`) sert de confirmation.
+    Route::get('/parent/tuition/preview', [ParentMobileMoneyController::class, 'preview']);
+    Route::get('/parent/mobile-money', [ParentMobileMoneyController::class, 'index']);
+    Route::post('/parent/mobile-money', [ParentMobileMoneyController::class, 'store'])->middleware('throttle:10,1');
+    Route::get('/parent/mobile-money/{transaction}', [ParentMobileMoneyController::class, 'show']);
 });
