@@ -80,4 +80,17 @@ final class EloquentEnrollmentRepository implements EnrollmentRepositoryContract
             ->when($schoolClassId, fn ($query, $id) => $query->where('school_class_id', $id))
             ->count();
     }
+
+    public function countsByClass(string $academicYear): array
+    {
+        return Enrollment::query()
+            ->join('school_classes', 'school_classes.id', '=', 'enrollments.school_class_id')
+            ->where('enrollments.academic_year', $academicYear)
+            ->selectRaw('school_classes.id as class_id, school_classes.name as class_name, count(*) as students_count')
+            ->groupBy('school_classes.id', 'school_classes.name')
+            ->orderBy('school_classes.name')
+            ->get()
+            ->map(fn ($row) => ['id' => $row->class_id, 'name' => $row->class_name, 'count' => (int) $row->students_count])
+            ->all();
+    }
 }

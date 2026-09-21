@@ -23,6 +23,7 @@ class DashboardController extends Controller
                 $request->only('academic_year', 'term_id', 'month'),
                 includeDiscipline: $user->can('discipline.manage'),
                 includeAccounting: $user->can('accounting.view'),
+                includeExpenses: $user->can('expenses.view'),
             ),
         ]);
     }

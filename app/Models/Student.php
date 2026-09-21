@@ -70,6 +70,16 @@ class Student extends Authenticatable
         return "{$this->first_name} {$this->last_name}";
     }
 
+    /**
+     * Cle sous laquelle le jeton de reinitialisation du mot de passe est range :
+     * l'eleve n'a pas d'e-mail (celui du tuteur est facultatif et partage entre
+     * freres et soeurs), son matricule est l'identifiant unique du portail.
+     */
+    public function getEmailForPasswordReset(): string
+    {
+        return $this->matricule;
+    }
+
     /** @return BelongsTo<SchoolClass, $this> */
     public function schoolClass(): BelongsTo
     {

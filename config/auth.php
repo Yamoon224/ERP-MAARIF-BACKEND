@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Student;
 use App\Models\User;
 
 return [
@@ -67,6 +68,15 @@ return [
             'model' => env('AUTH_MODEL', User::class),
         ],
 
+        // Parents : le "compte" est l'eleve, identifie par son matricule. Ce
+        // fournisseur ne sert qu'a la reinitialisation du mot de passe (voir
+        // `passwords.students`) ; la connexion, elle, est verifiee a la main
+        // par ParentAuthService.
+        'students' => [
+            'driver' => 'eloquent',
+            'model' => Student::class,
+        ],
+
         // 'users' => [
         //     'driver' => 'database',
         //     'table' => 'users',
@@ -99,6 +109,31 @@ return [
             'expire' => 60,
             'throttle' => 60,
         ],
+
+        // Meme table que le personnel : la cle y est le matricule (voir
+        // Student::getEmailForPasswordReset), qui ne peut pas entrer en
+        // collision avec une adresse e-mail.
+        'students' => [
+            'provider' => 'students',
+            'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
+            'expire' => 60,
+            'throttle' => 60,
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Duree de vie d'une session (jeton d'acces)
+    |--------------------------------------------------------------------------
+    |
+    | "Se souvenir de moi" : sans la case cochee, le jeton expire au bout d'une
+    | journee de travail ; avec, il dure un mois. Valeurs en minutes.
+    |
+    */
+
+    'token_lifetime' => [
+        'standard' => (int) env('AUTH_TOKEN_TTL_MINUTES', 720),
+        'remembered' => (int) env('AUTH_REMEMBERED_TOKEN_TTL_MINUTES', 43200),
     ],
 
     /*

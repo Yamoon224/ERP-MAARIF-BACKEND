@@ -3,7 +3,9 @@
 namespace App\Domains\Auth\Http\Controllers;
 
 use App\Domains\Auth\Http\Requests\ChangePasswordRequest;
+use App\Domains\Auth\Http\Requests\ParentForgotPasswordRequest;
 use App\Domains\Auth\Http\Requests\ParentLoginRequest;
+use App\Domains\Auth\Http\Requests\ParentResetPasswordRequest;
 use App\Domains\Auth\Http\Resources\AuthenticatedStudentResource;
 use App\Domains\Auth\Services\ParentAuthService;
 use App\Http\Controllers\Controller;
@@ -20,6 +22,7 @@ class ParentAuthController extends Controller
         $result = $this->auth->attempt(
             $request->only('matricule', 'password'),
             $request->input('device_name', 'web'),
+            $request->boolean('remember'),
         );
 
         return response()->json([
@@ -28,6 +31,22 @@ class ParentAuthController extends Controller
                 'student' => new AuthenticatedStudentResource($result['student']->load('schoolClass')),
             ],
         ]);
+    }
+
+    public function forgotPassword(ParentForgotPasswordRequest $request): JsonResponse
+    {
+        $this->auth->sendPasswordResetLink($request->validated('matricule'));
+
+        return response()->json([
+            'message' => 'Si ce matricule existe, un message contenant un lien de réinitialisation vient d\'être envoyé au tuteur de l\'élève.',
+        ]);
+    }
+
+    public function resetPassword(ParentResetPasswordRequest $request): JsonResponse
+    {
+        $this->auth->resetPassword($request->safe()->only(['matricule', 'token', 'password']));
+
+        return response()->json(null, 204);
     }
 
     public function logout(Request $request): JsonResponse

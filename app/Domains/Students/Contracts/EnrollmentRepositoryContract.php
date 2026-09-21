@@ -37,4 +37,12 @@ interface EnrollmentRepositoryContract
 
     /** @return Collection<int, Enrollment> */
     public function forYear(string $academicYear): Collection;
+
+    /**
+     * Effectif de chaque classe de l'annee, par ordre alphabetique ; une
+     * inscription sans classe n'est comptee nulle part.
+     *
+     * @return list<array{id: string, name: string, count: int}>
+     */
+    public function countsByClass(string $academicYear): array;
 }

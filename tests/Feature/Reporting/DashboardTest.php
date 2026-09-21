@@ -3,8 +3,11 @@
 namespace Tests\Feature\Reporting;
 
 use App\Models\AttendanceRecord;
+use App\Models\Expense;
+use App\Models\ExpenseCategory;
 use App\Models\Grade;
 use App\Models\Sanction;
+use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\Subject;
 use App\Models\Summon;
@@ -92,6 +95,49 @@ class DashboardTest extends TestCase
         $this->actingAs($this->userWithRole('admin'))->getJson('/api/dashboard')
             ->assertOk()
             ->assertJsonStructure(['data' => ['discipline' => ['sanctions'], 'accounting' => ['collected', 'arrears', 'recovery_rate']]]);
+    }
+
+    #[Test]
+    public function les_graphiques_ont_leurs_donnees_effectif_par_classe_encaissements_et_depenses(): void
+    {
+        $admin = $this->userWithRole('admin');
+        ['class' => $class] = $this->schoolYear('2025-2026', 50000, '6eme A');
+        $other = SchoolClass::factory()->create(['name' => '5eme B', 'level' => '5eme', 'academic_year' => '2025-2026']);
+        Student::factory()->count(3)->create(['school_class_id' => $class->id]);
+        Student::factory()->create(['school_class_id' => $other->id]);
+
+        $category = ExpenseCategory::factory()->create(['name' => 'Fournitures']);
+        Expense::factory()->create(['expense_category_id' => $category->id, 'amount' => 120000, 'unit_price' => 120000, 'spent_at' => '2025-09-20']);
+        Expense::factory()->create(['expense_category_id' => $category->id, 'amount' => 30000, 'unit_price' => 30000, 'spent_at' => '2025-11-04']);
+        Expense::factory()->cancelled()->create(['expense_category_id' => $category->id, 'amount' => 777, 'unit_price' => 777, 'spent_at' => '2025-11-05']);
+
+        $response = $this->actingAs($admin)->getJson('/api/dashboard?academic_year=2025-2026')->assertOk();
+
+        // Effectif de chaque classe, par ordre alphabetique.
+        $this->assertSame(['5eme B', '6eme A'], array_column($response->json('data.students_by_class'), 'name'));
+        $this->assertSame([1, 3], array_column($response->json('data.students_by_class'), 'count'));
+
+        $response->assertJsonPath('data.expenses.total', 150000)
+            ->assertJsonPath('data.expenses.count', 2)
+            ->assertJsonPath('data.expenses.by_category.0.name', 'Fournitures')
+            ->assertJsonPath('data.expenses.by_category.0.total', 150000);
+        $this->assertNotEmpty($response->json('data.expenses.by_month'));
+        $this->assertNotEmpty($response->json('data.accounting.by_month'));
+        $this->assertCount(4, $response->json('data.accounting.by_method'));
+    }
+
+    #[Test]
+    public function les_depenses_ne_sont_visibles_qu_avec_le_droit_de_les_consulter(): void
+    {
+        $this->schoolYear();
+
+        $this->actingAs($this->userWithRole('teacher'))->getJson('/api/dashboard')
+            ->assertOk()
+            ->assertJsonPath('data.expenses', null);
+
+        $this->actingAs($this->userWithRole('accountant'))->getJson('/api/dashboard')
+            ->assertOk()
+            ->assertJsonPath('data.expenses.total', 0);
     }
 
     #[Test]

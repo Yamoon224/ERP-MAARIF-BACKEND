@@ -2,11 +2,16 @@
 
 namespace App\Domains\Auth\Services;
 
+use App\Domains\Auth\Support\SessionLifetime;
+use App\Domains\Notifications\Contracts\NotificationSenderContract;
+use App\Domains\Notifications\DTOs\NotificationMessage;
+use App\Domains\Notifications\Enums\NotificationChannel;
 use App\Models\PersonalAccessToken;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -16,13 +21,16 @@ use Illuminate\Validation\ValidationException;
  */
 final class StaffAuthService
 {
+    public function __construct(private readonly NotificationSenderContract $sender) {}
+
     /**
      * @param  array{email: string, password: string}  $credentials
+     * @param  bool  $remember  "Se souvenir de moi" : allonge la duree de vie du jeton
      * @return array{user: User, token: string}
      *
      * @throws ValidationException
      */
-    public function attempt(array $credentials, string $deviceName = 'web'): array
+    public function attempt(array $credentials, string $deviceName = 'web', bool $remember = false): array
     {
         if (! Auth::validate($credentials)) {
             // Message identique que le compte existe ou non : distinguer les
@@ -46,8 +54,64 @@ final class StaffAuthService
 
         return [
             'user' => $user,
-            'token' => $user->createToken($deviceName)->plainTextToken,
+            'token' => $user->createToken($deviceName, ['*'], SessionLifetime::expiresAt($remember))->plainTextToken,
         ];
+    }
+
+    /**
+     * Envoie a l'adresse e-mail du compte un lien de reinitialisation du mot de
+     * passe. Ne dit jamais si le compte existe : la reponse est la meme pour une
+     * adresse inconnue, un compte desactive ou une demande trop rapprochee,
+     * sinon ce formulaire public listerait les comptes du personnel.
+     */
+    public function sendPasswordResetLink(string $email): void
+    {
+        Password::broker('users')->sendResetLink(['email' => $email], function (User $user, string $token): bool {
+            if ($user->is_active) {
+                $this->sender->send(new NotificationMessage(
+                    channel: NotificationChannel::Email,
+                    recipient: $user->email,
+                    body: $this->resetMessage($user, $token),
+                    subject: 'Réinitialisation de votre mot de passe',
+                ));
+            }
+
+            return true;
+        });
+    }
+
+    /**
+     * Definit un nouveau mot de passe a partir du lien recu par e-mail, et ferme
+     * toutes les sessions ouvertes : le mot de passe est reinitialise parce qu'il
+     * est perdu ou compromis.
+     *
+     * @param  array{email: string, token: string, password: string}  $data
+     *
+     * @throws ValidationException
+     */
+    public function resetPassword(array $data): void
+    {
+        $status = Password::broker('users')->reset($data, function (User $user, string $password): void {
+            $user->update(['password' => $password]);
+            $user->tokens()->delete();
+        });
+
+        if ($status !== Password::PASSWORD_RESET) {
+            throw ValidationException::withMessages([
+                'email' => ['Ce lien de réinitialisation est invalide ou a expiré.'],
+            ]);
+        }
+    }
+
+    private function resetMessage(User $user, string $token): string
+    {
+        $url = rtrim(config('app.frontend_url'), '/').'/reset-password?'.http_build_query(['token' => $token, 'email' => $user->email]);
+        $minutes = config('auth.passwords.users.expire');
+
+        return "Bonjour {$user->name},\n\n"
+            ."Vous avez demandé la réinitialisation de votre mot de passe ERP Maarif. Ouvrez ce lien pour en choisir un nouveau (valable {$minutes} minutes) :\n\n"
+            ."{$url}\n\n"
+            .'Si vous n\'êtes pas à l\'origine de cette demande, ignorez ce message : votre mot de passe reste inchangé.';
     }
 
     public function logout(User $user): void

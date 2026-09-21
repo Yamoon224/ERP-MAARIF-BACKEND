@@ -42,6 +42,10 @@ Deux types de comptes, un seul mecanisme de jeton (Sanctum) :
 - **Personnel** (`App\Models\User`) : `POST /api/login` avec e-mail + mot de passe. Roles `admin` / `teacher` / `accountant` via Spatie Permission. `PUT /api/me` et `PUT /api/me/password` : profil et mot de passe (les autres sessions sont fermees au changement de mot de passe).
 - **Parent** (`App\Models\Student`) : `POST /api/parent/login` avec le **matricule de l'eleve** + mot de passe (cahier des charges 3.1). Le middleware `account_type:staff|parent` cloisonne les deux zones de l'API : un jeton parent ne peut jamais atteindre une route d'administration, et reciproquement.
 
+**Se souvenir de moi.** Les deux `login` acceptent `remember` (booleen). Le jeton expire au bout de 12 h sans la case cochee, de 30 jours avec (`AUTH_TOKEN_TTL_MINUTES` / `AUTH_REMEMBERED_TOKEN_TTL_MINUTES`, voir `config/auth.php`).
+
+**Mot de passe oublie.** `POST /api/forgot-password` (`email`) et `POST /api/parent/forgot-password` (`matricule`) envoient un lien a usage unique, valable 60 minutes : par e-mail au compte du personnel, au tuteur de l'eleve (e-mail, sinon SMS) pour un parent. La reponse est identique que le compte existe ou non, et le lien ne part jamais dans le journal des notifications. `POST /api/reset-password` et `POST /api/parent/reset-password` (`token`, `email` ou `matricule`, `password`, `password_confirmation`) choisissent le nouveau mot de passe et ferment toutes les sessions. Le lien pointe vers l'interface (`FRONTEND_URL`), pas vers l'API. En developpement (`MAIL_MAILER=log`), le lien se lit dans `storage/logs/laravel.log`.
+
 ### Annee scolaire, trimestres, filtres
 
 Une annee scolaire (`2025-2026`) compte **trois trimestres**. Un eleve s'inscrit pour **l'annee entiere** : la table `enrollments` garde une inscription par eleve et par annee (`students.school_class_id` reste la classe *actuelle*, synchronisee par `StudentEnrollmentObserver`). Reinscrire un eleve n'efface donc jamais son historique : `POST /api/students/{id}/enrollments`.

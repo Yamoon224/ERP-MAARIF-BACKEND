@@ -23,6 +23,7 @@ class ParentLoginRequest extends FormRequest
             'matricule' => ['required', 'string'],
             'password' => ['required', 'string'],
             'device_name' => ['nullable', 'string', 'max:100'],
+            'remember' => ['nullable', 'boolean'],
         ];
     }
 }

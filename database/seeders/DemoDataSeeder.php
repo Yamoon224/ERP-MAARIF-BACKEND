@@ -10,6 +10,7 @@ use App\Domains\Admissions\Services\AdmissionService;
 use App\Domains\Attendance\Enums\AttendanceStatus;
 use App\Domains\Discipline\Enums\SanctionType;
 use App\Domains\Discipline\Enums\SummonStatus;
+use App\Domains\Expenses\Services\ExpenseService;
 use App\Domains\Grades\Enums\GradeType;
 use App\Domains\Notifications\Enums\NotificationChannel;
 use App\Domains\Notifications\Enums\NotificationStatus;
@@ -19,6 +20,7 @@ use App\Domains\Results\Services\PromotionService;
 use App\Domains\Results\Services\ResultsService;
 use App\Models\AttendanceRecord;
 use App\Models\Enrollment;
+use App\Models\ExpenseCategory;
 use App\Models\Grade;
 use App\Models\NotificationLog;
 use App\Models\Sanction;
@@ -77,8 +79,55 @@ class DemoDataSeeder extends Seeder
         $this->recordActivity($students->concat($newcomers), $currentYear['terms'], $subjects, $teacher, $admin);
         $this->recordPayments($students->concat($newcomers), $currentYear['label'], $accountant);
 
+        $this->recordExpenses($startYear - 1, $accountant, endsOn: Carbon::create($startYear, 6, 30));
+        $this->recordExpenses($startYear, $accountant, endsOn: Carbon::now()->startOfDay());
+
         $this->recordFailedNotification($newcomers->first());
         $this->createAdmissions($currentYear['label'], $currentClass6, $admin);
+    }
+
+    /**
+     * Achats et depenses courantes de l'annee : fournitures avant la rentree,
+     * puis factures et reparations reparties jusqu'a `$endsOn` (aujourd'hui pour
+     * l'annee en cours : une depense n'est pas datee dans le futur).
+     */
+    private function recordExpenses(int $startYear, User $accountant, Carbon $endsOn): void
+    {
+        $this->call(ExpenseCategorySeeder::class);
+
+        $categories = ExpenseCategory::query()->pluck('id', 'name');
+        $expenses = app(ExpenseService::class);
+
+        // [categorie, designation, fournisseur, quantite, unite, prix unitaire, mode de paiement]
+        $purchases = [
+            ['Fournitures scolaires', 'Craies blanches (boîtes de 100)', 'Papeterie Centrale', 40, 'boîte', 12000, PaymentMethod::Cash],
+            ['Registres et imprimés', "Registres d'appel", 'Imprimerie Nationale', 12, 'registre', 35000, PaymentMethod::BankTransfer],
+            ['Fournitures scolaires', 'Craies de couleur', 'Papeterie Centrale', 15, 'boîte', 18000, PaymentMethod::Cash],
+            ['Fournitures scolaires', 'Marqueurs pour tableau blanc', 'Papeterie Centrale', 30, 'unité', 6500, PaymentMethod::MobileMoney],
+            ['Registres et imprimés', 'Cahiers de textes', 'Imprimerie Nationale', 20, 'cahier', 9000, PaymentMethod::Cash],
+            ['Entretien et réparations', 'Produits et balais de nettoyage', 'Marché Madina', 1, 'lot', 145000, PaymentMethod::Cash],
+            ['Eau, électricité et communications', "Facture d'électricité", "Compagnie d'électricité", 1, 'facture', 380000, PaymentMethod::MobileMoney],
+            ['Mobilier et équipement', 'Réparation de bancs', 'Menuiserie Diallo', 8, 'banc', 45000, PaymentMethod::Cash],
+            ['Matériel pédagogique', 'Cartes murales de géographie', 'Librairie du Savoir', 6, 'carte', 85000, PaymentMethod::Cheque],
+            ['Eau, électricité et communications', "Facture d'eau", 'Compagnie des eaux', 1, 'facture', 95000, PaymentMethod::MobileMoney],
+            ['Fournitures scolaires', 'Ramettes de papier A4', 'Papeterie Centrale', 25, 'ramette', 42000, PaymentMethod::BankTransfer],
+        ];
+
+        $start = Carbon::create($startYear, 9, 1)->startOfDay();
+        $span = max($start->diffInDays($endsOn), 0);
+
+        foreach ($purchases as $index => [$category, $label, $supplier, $quantity, $unit, $unitPrice, $method]) {
+            $expenses->register([
+                'expense_category_id' => $categories[$category],
+                'label' => $label,
+                'supplier_name' => $supplier,
+                'quantity' => $quantity,
+                'unit' => $unit,
+                'unit_price' => $unitPrice,
+                'method' => $method->value,
+                'spent_at' => $start->copy()->addDays(intdiv($span * $index, count($purchases) - 1))->toDateString(),
+            ], $accountant->id);
+        }
     }
 
     /**

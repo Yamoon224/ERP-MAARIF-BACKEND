@@ -25,6 +25,12 @@ use App\Domains\Discipline\Contracts\SanctionRepositoryContract;
 use App\Domains\Discipline\Contracts\SummonRepositoryContract;
 use App\Domains\Discipline\Repositories\EloquentSanctionRepository;
 use App\Domains\Discipline\Repositories\EloquentSummonRepository;
+use App\Domains\Expenses\Contracts\ExpenseCategoryRepositoryContract;
+use App\Domains\Expenses\Contracts\ExpenseReportRepositoryContract;
+use App\Domains\Expenses\Contracts\ExpenseRepositoryContract;
+use App\Domains\Expenses\Repositories\EloquentExpenseCategoryRepository;
+use App\Domains\Expenses\Repositories\EloquentExpenseReportRepository;
+use App\Domains\Expenses\Repositories\EloquentExpenseRepository;
 use App\Domains\Grades\Contracts\GradeRepositoryContract;
 use App\Domains\Grades\Repositories\EloquentGradeRepository;
 use App\Domains\Notifications\Contracts\NotificationSenderContract;
@@ -74,6 +80,10 @@ class DomainServiceProvider extends ServiceProvider
         PaymentRepositoryContract::class => EloquentPaymentRepository::class,
         InstallmentRepositoryContract::class => EloquentInstallmentRepository::class,
         AccountingReportRepositoryContract::class => EloquentAccountingReportRepository::class,
+
+        ExpenseRepositoryContract::class => EloquentExpenseRepository::class,
+        ExpenseCategoryRepositoryContract::class => EloquentExpenseCategoryRepository::class,
+        ExpenseReportRepositoryContract::class => EloquentExpenseReportRepository::class,
 
         AdmissionRepositoryContract::class => EloquentAdmissionRepository::class,
         PromotionDecisionRepositoryContract::class => EloquentPromotionDecisionRepository::class,

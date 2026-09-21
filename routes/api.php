@@ -14,6 +14,9 @@ use App\Domains\Auth\Http\Controllers\ParentAuthController;
 use App\Domains\Auth\Http\Controllers\StaffAuthController;
 use App\Domains\Discipline\Http\Controllers\SanctionController;
 use App\Domains\Discipline\Http\Controllers\SummonController;
+use App\Domains\Expenses\Http\Controllers\ExpenseCategoryController;
+use App\Domains\Expenses\Http\Controllers\ExpenseController;
+use App\Domains\Expenses\Http\Controllers\ExpenseReportController;
 use App\Domains\Grades\Http\Controllers\BulletinController;
 use App\Domains\Grades\Http\Controllers\GradeController;
 use App\Domains\Notifications\Http\Controllers\NotificationLogController;
@@ -54,6 +57,13 @@ Route::get('/health', HealthController::class);
 
 Route::post('/login', [StaffAuthController::class, 'login'])->middleware('throttle:6,1');
 Route::post('/parent/login', [ParentAuthController::class, 'login'])->middleware('throttle:6,1');
+
+// Mot de passe oublie : un lien a usage unique est envoye a l'e-mail du compte
+// (personnel) ou aux coordonnees du tuteur (parent), jamais affiche a l'ecran.
+Route::post('/forgot-password', [StaffAuthController::class, 'forgotPassword'])->middleware('throttle:6,1');
+Route::post('/reset-password', [StaffAuthController::class, 'resetPassword'])->middleware('throttle:6,1');
+Route::post('/parent/forgot-password', [ParentAuthController::class, 'forgotPassword'])->middleware('throttle:6,1');
+Route::post('/parent/reset-password', [ParentAuthController::class, 'resetPassword'])->middleware('throttle:6,1');
 
 // =============================================================================
 // Personnel (administrateurs, enseignants, comptables)
@@ -170,6 +180,25 @@ Route::middleware(['auth:sanctum', 'account_type:staff'])->group(function (): vo
         Route::post('/payments', [PaymentController::class, 'store']);
         Route::post('/payments/{payment}/cancel', [PaymentController::class, 'cancel']);
         Route::put('/classes/{schoolClass}/fee', [FeeController::class, 'update']);
+    });
+
+    // Depenses et approvisionnements de l'etablissement (craies, registres...).
+    Route::middleware('permission:expenses.view')->group(function (): void {
+        Route::get('/expenses/summary', [ExpenseReportController::class, 'summary']);
+        Route::get('/expenses/suppliers', [ExpenseController::class, 'suppliers']);
+        Route::get('/expenses', [ExpenseController::class, 'index']);
+        Route::get('/expenses/{expense}', [ExpenseController::class, 'show']);
+        Route::get('/expense-categories', [ExpenseCategoryController::class, 'index']);
+    });
+    Route::middleware('permission:expenses.manage')->group(function (): void {
+        Route::post('/expenses', [ExpenseController::class, 'store']);
+        Route::put('/expenses/{expense}', [ExpenseController::class, 'update']);
+        Route::patch('/expenses/{expense}', [ExpenseController::class, 'update']);
+        Route::post('/expenses/{expense}/cancel', [ExpenseController::class, 'cancel']);
+        Route::post('/expense-categories', [ExpenseCategoryController::class, 'store']);
+        Route::put('/expense-categories/{expenseCategory}', [ExpenseCategoryController::class, 'update']);
+        Route::patch('/expense-categories/{expenseCategory}', [ExpenseCategoryController::class, 'update']);
+        Route::delete('/expense-categories/{expenseCategory}', [ExpenseCategoryController::class, 'destroy']);
     });
 
     Route::middleware('permission:notifications.view')->group(function (): void {

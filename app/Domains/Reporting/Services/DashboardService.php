@@ -8,6 +8,7 @@ use App\Domains\Accounting\Services\AccountingReportService;
 use App\Domains\Attendance\Contracts\AttendanceRepositoryContract;
 use App\Domains\Discipline\Contracts\SanctionRepositoryContract;
 use App\Domains\Discipline\Contracts\SummonRepositoryContract;
+use App\Domains\Expenses\Services\ExpenseReportService;
 use App\Domains\Grades\Contracts\GradeRepositoryContract;
 use App\Domains\Shared\Support\Period;
 use App\Domains\Students\Contracts\EnrollmentRepositoryContract;
@@ -31,13 +32,14 @@ final class DashboardService
         private readonly SanctionRepositoryContract $sanctions,
         private readonly SummonRepositoryContract $summons,
         private readonly AccountingReportService $accounting,
+        private readonly ExpenseReportService $expenses,
     ) {}
 
     /**
      * @param  array<string, mixed>  $filters  academic_year, term_id, month
      * @return array<string, mixed>
      */
-    public function stats(array $filters, bool $includeDiscipline, bool $includeAccounting): array
+    public function stats(array $filters, bool $includeDiscipline, bool $includeAccounting, bool $includeExpenses = false): array
     {
         $year = $filters['academic_year'] ?? $this->years->defaultYear();
         $scope = ['academic_year' => $year, ...array_intersect_key($filters, ['term_id' => true, 'month' => true])];
@@ -50,6 +52,7 @@ final class DashboardService
             'period' => $year === null ? null : Period::fromFilters($scope)?->toArray(),
             'students' => $year === null ? 0 : $this->enrollments->countForYear($year),
             'classes' => $year === null ? 0 : $this->classes->count(['academic_year' => $year]),
+            'students_by_class' => $year === null ? [] : $this->enrollments->countsByClass($year),
             'grades' => [
                 'count' => $this->grades->count($scope),
                 'average' => $averages->isEmpty() ? null : round((float) $averages->avg(), 2),
@@ -66,12 +69,13 @@ final class DashboardService
                 'summons_pending' => $this->summons->count([...$scope, 'status' => 'pending']),
             ] : null,
             'accounting' => $includeAccounting ? $this->accountingStats($scope) : null,
+            'expenses' => $includeExpenses ? $this->expenseStats($scope) : null,
         ];
     }
 
     /**
      * @param  array<string, mixed>  $scope
-     * @return array{collected: float, arrears: float, recovery_rate: float|null}
+     * @return array<string, mixed>
      */
     private function accountingStats(array $scope): array
     {
@@ -81,6 +85,24 @@ final class DashboardService
             'collected' => $summary['collected']['total'],
             'arrears' => $summary['arrears']['amount'],
             'recovery_rate' => $summary['expected']['rate'],
+            'by_month' => $summary['by_month'],
+            'by_method' => $summary['by_method'],
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $scope
+     * @return array<string, mixed>
+     */
+    private function expenseStats(array $scope): array
+    {
+        $summary = $this->expenses->summary($scope);
+
+        return [
+            'total' => $summary['total']['total'],
+            'count' => $summary['total']['count'],
+            'by_category' => $summary['by_category'],
+            'by_month' => $summary['by_month'],
         ];
     }
 }

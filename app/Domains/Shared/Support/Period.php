@@ -100,6 +100,16 @@ final class Period
             );
         }
 
+        return self::forAcademicYearCalendar($academicYear);
+    }
+
+    /**
+     * Annee scolaire au calendrier civil (1er septembre - 31 aout), quelles que
+     * soient les dates des trimestres : c'est la fenetre des depenses, qui
+     * commencent avant la rentree (achat des fournitures en septembre).
+     */
+    public static function forAcademicYearCalendar(string $academicYear): self
+    {
         [$startYear, $endYear] = array_map('intval', explode('-', $academicYear));
 
         return new self(

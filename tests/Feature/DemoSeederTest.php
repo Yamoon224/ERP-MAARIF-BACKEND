@@ -8,6 +8,7 @@ use App\Domains\Notifications\Enums\NotificationType;
 use App\Domains\Results\Enums\PromotionDecisionType;
 use App\Models\AdmissionApplication;
 use App\Models\Enrollment;
+use App\Models\Expense;
 use App\Models\NotificationLog;
 use App\Models\Payment;
 use App\Models\PromotionDecision;
@@ -35,6 +36,10 @@ class DemoSeederTest extends TestCase
         // 10 eleves inscrits deux annees de suite + 5 nouveaux la derniere + 1 candidat admis puis inscrit.
         $this->assertSame(26, Enrollment::count());
         $this->assertGreaterThan(0, Payment::count());
+
+        // Deux annees d'achats : fournitures, registres, factures et reparations.
+        $this->assertSame(22, Expense::count());
+        $this->assertSame(0, Expense::where('spent_at', '>', today())->count());
 
         // Chaque eleve de l'annee passee a une decision, et tous sont reinscrits (admis ou redoublants).
         $this->assertSame(10, PromotionDecision::count());
