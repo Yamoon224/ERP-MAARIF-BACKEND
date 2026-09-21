@@ -8,6 +8,7 @@ use App\Domains\Academics\Services\TeachingAssignmentService;
 use App\Http\Controllers\Controller;
 use App\Models\SchoolClass;
 use App\Models\Subject;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
@@ -29,11 +30,12 @@ class TeachingAssignmentController extends Controller
     }
 
     /** Affecte, ou remplace, l'enseignant de cette matière dans cette classe. */
-    public function update(AssignTeacherRequest $request, SchoolClass $schoolClass, Subject $subject): TeachingAssignmentResource
+    public function update(AssignTeacherRequest $request, SchoolClass $schoolClass, Subject $subject): JsonResponse
     {
-        return new TeachingAssignmentResource(
+        // 200 même à la première affectation : le client remplace, il ne "crée" pas une ressource à part.
+        return (new TeachingAssignmentResource(
             $this->assignments->assign($schoolClass, $subject, $request->validated('teacher_id')),
-        );
+        ))->response()->setStatusCode(200);
     }
 
     public function destroy(SchoolClass $schoolClass, Subject $subject): Response

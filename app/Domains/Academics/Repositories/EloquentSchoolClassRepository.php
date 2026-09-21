@@ -46,7 +46,7 @@ final class EloquentSchoolClassRepository implements SchoolClassRepositoryContra
     {
         $schoolClass->update($attributes);
 
-        return $schoolClass->refresh();
+        return $schoolClass->refresh()->load('mainTeacher:id,name');
     }
 
     public function delete(SchoolClass $schoolClass): void
