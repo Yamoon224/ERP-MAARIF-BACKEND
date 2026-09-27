@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Domains\Attendance\Enums\AttendanceSource;
 use App\Domains\Attendance\Enums\AttendanceStatus;
 use Database\Factories\AttendanceRecordFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -20,6 +21,11 @@ use Illuminate\Support\Carbon;
  * @property Carbon $date
  * @property AttendanceStatus $status
  * @property bool $justified
+ * @property AttendanceSource $source
+ * @property Carbon|null $checked_in_at
+ * @property float|null $latitude
+ * @property float|null $longitude
+ * @property int|null $distance_meters
  */
 class AttendanceRecord extends Model
 {
@@ -27,7 +33,19 @@ class AttendanceRecord extends Model
     use HasFactory, HasUuids;
 
     /** @var list<string> */
-    protected $fillable = ['student_id', 'date', 'status', 'justified', 'reason', 'recorded_by'];
+    protected $fillable = [
+        'student_id', 'date', 'status', 'justified', 'reason', 'recorded_by',
+        'source', 'checked_in_at', 'latitude', 'longitude', 'distance_meters',
+    ];
+
+    /**
+     * Defaut applique en memoire des la creation : la colonne a bien un
+     * defaut cote base, mais Eloquent ne le relit pas apres un `create()`
+     * sans `refresh()`, et le cast enum de `source` echoue sur `null`.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = ['source' => 'manual'];
 
     /** @return array<string, string> */
     protected function casts(): array
@@ -40,6 +58,11 @@ class AttendanceRecord extends Model
             'date' => 'date:Y-m-d',
             'status' => AttendanceStatus::class,
             'justified' => 'boolean',
+            'source' => AttendanceSource::class,
+            'checked_in_at' => 'datetime',
+            'latitude' => 'float',
+            'longitude' => 'float',
+            'distance_meters' => 'integer',
         ];
     }
 

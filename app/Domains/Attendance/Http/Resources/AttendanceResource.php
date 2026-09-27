@@ -23,6 +23,8 @@ class AttendanceResource extends JsonResource
             'status' => $this->status->value,
             'justified' => $this->justified,
             'reason' => $this->reason,
+            'source' => $this->source->value,
+            'checked_in_at' => $this->checked_in_at?->toIso8601String(),
         ];
     }
 }

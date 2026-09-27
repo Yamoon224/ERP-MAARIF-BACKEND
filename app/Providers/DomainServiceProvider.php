@@ -15,17 +15,19 @@ use App\Domains\Accounting\Contracts\InstallmentRepositoryContract;
 use App\Domains\Accounting\Contracts\MobileMoneyGatewayContract;
 use App\Domains\Accounting\Contracts\MobileMoneyRepositoryContract;
 use App\Domains\Accounting\Contracts\PaymentRepositoryContract;
+use App\Domains\Accounting\Gateways\SandboxMobileMoneyGateway;
 use App\Domains\Accounting\Observers\EnrollmentTuitionObserver;
 use App\Domains\Accounting\Observers\SchoolClassFeeObserver;
 use App\Domains\Accounting\Observers\TermCalendarObserver;
 use App\Domains\Accounting\Repositories\EloquentAccountingReportRepository;
-use App\Domains\Accounting\Gateways\SandboxMobileMoneyGateway;
 use App\Domains\Accounting\Repositories\EloquentInstallmentRepository;
 use App\Domains\Accounting\Repositories\EloquentMobileMoneyRepository;
 use App\Domains\Accounting\Repositories\EloquentPaymentRepository;
 use App\Domains\Admissions\Contracts\AdmissionRepositoryContract;
 use App\Domains\Admissions\Repositories\EloquentAdmissionRepository;
+use App\Domains\Attendance\Contracts\AttendanceGateSettingRepositoryContract;
 use App\Domains\Attendance\Contracts\AttendanceRepositoryContract;
+use App\Domains\Attendance\Repositories\EloquentAttendanceGateSettingRepository;
 use App\Domains\Attendance\Repositories\EloquentAttendanceRepository;
 use App\Domains\Discipline\Contracts\SanctionRepositoryContract;
 use App\Domains\Discipline\Contracts\SummonRepositoryContract;
@@ -83,6 +85,7 @@ class DomainServiceProvider extends ServiceProvider
 
         GradeRepositoryContract::class => EloquentGradeRepository::class,
         AttendanceRepositoryContract::class => EloquentAttendanceRepository::class,
+        AttendanceGateSettingRepositoryContract::class => EloquentAttendanceGateSettingRepository::class,
 
         SummonRepositoryContract::class => EloquentSummonRepository::class,
         SanctionRepositoryContract::class => EloquentSanctionRepository::class,

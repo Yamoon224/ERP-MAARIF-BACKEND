@@ -15,6 +15,9 @@ interface StudentRepositoryContract
 
     public function findOrFail(string $id): Student;
 
+    /** Retrouve l'eleve par le jeton QR imprime sur sa carte scolaire, ou `null` si aucun eleve ne le porte. */
+    public function findByQrToken(string $qrToken): ?Student;
+
     /** @param  array<string, mixed>  $attributes */
     public function create(array $attributes): Student;
 

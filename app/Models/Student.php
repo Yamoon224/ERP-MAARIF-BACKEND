@@ -23,6 +23,7 @@ use Laravel\Sanctum\HasApiTokens;
  *
  * @property string $id
  * @property string $matricule
+ * @property string|null $qr_token
  * @property string $first_name
  * @property string $last_name
  * @property string|null $school_class_id
@@ -38,6 +39,7 @@ class Student extends Authenticatable
     /** @var list<string> */
     protected $fillable = [
         'matricule',
+        'qr_token',
         'password',
         'first_name',
         'last_name',

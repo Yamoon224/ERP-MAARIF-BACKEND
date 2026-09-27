@@ -4,6 +4,7 @@ namespace App\Domains\Attendance\Services;
 
 use App\Domains\Attendance\Contracts\AttendanceRepositoryContract;
 use App\Domains\Attendance\Exceptions\AttendanceException;
+use App\Domains\Students\Contracts\StudentRepositoryContract;
 use App\Models\AttendanceRecord;
 use App\Models\Student;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -13,7 +14,10 @@ use Illuminate\Support\Facades\DB;
 
 final class AttendanceService
 {
-    public function __construct(private readonly AttendanceRepositoryContract $records) {}
+    public function __construct(
+        private readonly AttendanceRepositoryContract $records,
+        private readonly StudentRepositoryContract $students,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $filters
@@ -89,5 +93,29 @@ final class AttendanceService
     public function delete(AttendanceRecord $record): void
     {
         $this->records->delete($record);
+    }
+
+    /**
+     * Pointage par carte scolaire (cahier des charges — pointage par QR
+     * code, option 2) : le surveillant scanne le QR de la carte de l'eleve
+     * depuis son interface, ce qui suffit a le pointer present pour
+     * aujourd'hui.
+     */
+    public function checkInByCard(string $qrToken, string $staffUserId): AttendanceRecord
+    {
+        $student = $this->students->findByQrToken($qrToken);
+
+        if ($student === null || ! $student->is_active) {
+            throw AttendanceException::unknownCard();
+        }
+
+        return $this->records->recordForDate($student->id, now()->toDateString(), [
+            'status' => 'present',
+            'justified' => false,
+            'reason' => null,
+            'recorded_by' => $staffUserId,
+            'source' => 'card_scan',
+            'checked_in_at' => now(),
+        ]);
     }
 }

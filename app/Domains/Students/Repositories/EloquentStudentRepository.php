@@ -44,6 +44,11 @@ final class EloquentStudentRepository implements StudentRepositoryContract
         return Student::query()->with('schoolClass')->findOrFail($id);
     }
 
+    public function findByQrToken(string $qrToken): ?Student
+    {
+        return Student::query()->where('qr_token', $qrToken)->first();
+    }
+
     public function create(array $attributes): Student
     {
         return Student::create($attributes);

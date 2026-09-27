@@ -3,10 +3,13 @@
 namespace App\Domains\Attendance\Http\Controllers;
 
 use App\Domains\Attendance\Http\Requests\BulkAttendanceRequest;
+use App\Domains\Attendance\Http\Requests\GateCheckInRequest;
+use App\Domains\Attendance\Http\Requests\ScanCardRequest;
 use App\Domains\Attendance\Http\Requests\StoreAttendanceRequest;
 use App\Domains\Attendance\Http\Requests\UpdateAttendanceRequest;
 use App\Domains\Attendance\Http\Resources\AttendanceResource;
 use App\Domains\Attendance\Services\AttendanceService;
+use App\Domains\Attendance\Services\GateCheckInService;
 use App\Domains\Shared\Support\Period;
 use App\Http\Controllers\Controller;
 use App\Models\AttendanceRecord;
@@ -24,7 +27,10 @@ class AttendanceController extends Controller
         'date_from', 'date_to', 'academic_year', 'term_id', 'month',
     ];
 
-    public function __construct(private readonly AttendanceService $attendance) {}
+    public function __construct(
+        private readonly AttendanceService $attendance,
+        private readonly GateCheckInService $gate,
+    ) {}
 
     public function index(Request $request): AnonymousResourceCollection
     {
@@ -95,6 +101,14 @@ class AttendanceController extends Controller
         );
     }
 
+    /** Pointage par carte scolaire (option 2) : le surveillant scanne le QR de la carte de l'eleve. */
+    public function scanCard(ScanCardRequest $request): JsonResponse
+    {
+        $record = $this->attendance->checkInByCard($request->validated('qr_token'), $request->user()->id);
+
+        return (new AttendanceResource($record->load('student')))->response()->setStatusCode(201);
+    }
+
     public function update(UpdateAttendanceRequest $request, AttendanceRecord $attendanceRecord): AttendanceResource
     {
         return new AttendanceResource($this->attendance->update($attendanceRecord, $request->validated())->load('student'));
@@ -121,6 +135,26 @@ class AttendanceController extends Controller
                 $request->integer('per_page', 15),
             ),
         );
+    }
+
+    /**
+     * Pointage geolocalise au portail (option 1) : le parent ou l'eleve
+     * scanne le QR affiche au portail depuis le portail, jamais un
+     * identifiant lu dans la requete (voir `$request->user()`).
+     */
+    public function checkIn(GateCheckInRequest $request): JsonResponse
+    {
+        /** @var Student $student */
+        $student = $request->user();
+
+        $record = $this->gate->checkIn(
+            $student,
+            $request->validated('token'),
+            (float) $request->validated('latitude'),
+            (float) $request->validated('longitude'),
+        );
+
+        return (new AttendanceResource($record->load('student')))->response()->setStatusCode(201);
     }
 
     private function validateFilters(Request $request): void

@@ -13,6 +13,7 @@ use App\Domains\Accounting\Http\Controllers\PaymentController;
 use App\Domains\Accounting\Http\Controllers\TuitionController;
 use App\Domains\Admissions\Http\Controllers\AdmissionController;
 use App\Domains\Attendance\Http\Controllers\AttendanceController;
+use App\Domains\Attendance\Http\Controllers\GateSettingsController;
 use App\Domains\Auth\Http\Controllers\ParentAuthController;
 use App\Domains\Auth\Http\Controllers\StaffAuthController;
 use App\Domains\Discipline\Http\Controllers\SanctionController;
@@ -31,6 +32,7 @@ use App\Domains\Roles\Http\Controllers\RoleController;
 use App\Domains\Roles\Http\Controllers\RolePermissionController;
 use App\Domains\Shared\Http\Controllers\HealthController;
 use App\Domains\Students\Http\Controllers\EnrollmentController;
+use App\Domains\Students\Http\Controllers\StudentCardController;
 use App\Domains\Students\Http\Controllers\StudentController;
 use App\Domains\Users\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -145,6 +147,11 @@ Route::middleware(['auth:sanctum', 'account_type:staff'])->group(function (): vo
         Route::delete('/students/{student}', [StudentController::class, 'destroy']);
         Route::post('/students/{student}/reset-password', [StudentController::class, 'resetPassword']);
         Route::post('/students/{student}/enrollments', [EnrollmentController::class, 'store']);
+
+        // Carte scolaire imprimable (QR code de pointage — option 2).
+        Route::get('/students/{student}/card', [StudentCardController::class, 'show']);
+        Route::post('/students/{student}/card/regenerate-token', [StudentCardController::class, 'regenerateToken']);
+        Route::get('/classes/{schoolClass}/students/cards', [StudentCardController::class, 'forClass']);
     });
 
     Route::middleware('permission:results.view')->group(function (): void {
@@ -179,9 +186,19 @@ Route::middleware(['auth:sanctum', 'account_type:staff'])->group(function (): vo
         Route::get('/attendance-records/summary', [AttendanceController::class, 'summary']);
         Route::get('/attendance-records/roll-call', [AttendanceController::class, 'rollCall']);
         Route::post('/attendance-records/bulk', [AttendanceController::class, 'storeBulk']);
+        // Pointage par carte scolaire (option 2) : le surveillant scanne le QR de la carte depuis son interface.
+        Route::post('/attendance-records/scan-card', [AttendanceController::class, 'scanCard']);
         Route::apiResource('attendance-records', AttendanceController::class)
             ->except(['show'])
             ->parameters(['attendance-records' => 'attendanceRecord']);
+
+        // Pointage geolocalise au portail (option 1) : reglage des coordonnees,
+        // du rayon, et export du QR a imprimer (voir GateCheckInService).
+        Route::get('/attendance/gate-settings', [GateSettingsController::class, 'show']);
+        Route::put('/attendance/gate-settings', [GateSettingsController::class, 'update']);
+        Route::post('/attendance/gate-settings/regenerate-token', [GateSettingsController::class, 'regenerateToken']);
+        Route::get('/attendance/gate-settings/qr', [GateSettingsController::class, 'qr']);
+        Route::get('/attendance/gate-settings/poster', [GateSettingsController::class, 'poster']);
     });
 
     Route::middleware('permission:discipline.manage')->group(function (): void {
@@ -249,6 +266,10 @@ Route::middleware(['auth:sanctum', 'account_type:parent'])->group(function (): v
     Route::get('/parent/bulletin/export', [BulletinController::class, 'exportMine']);
     Route::get('/parent/results', [ResultsController::class, 'mine']);
     Route::get('/parent/attendance', [AttendanceController::class, 'mine']);
+    // Pointage geolocalise au portail (option 1) : le parent ou l'eleve scanne
+    // le QR affiche au portail depuis son espace, jamais un identifiant lu
+    // dans la requete (voir AttendanceController::checkIn).
+    Route::post('/parent/attendance/check-in', [AttendanceController::class, 'checkIn'])->middleware('throttle:10,1');
     Route::get('/parent/summons', [SummonController::class, 'mine']);
     Route::get('/parent/sanctions', [SanctionController::class, 'mine']);
     Route::get('/parent/tuition', [TuitionController::class, 'mine']);
