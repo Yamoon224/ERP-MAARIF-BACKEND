@@ -251,6 +251,36 @@ class ResultsTest extends TestCase
     }
 
     #[Test]
+    public function un_bareme_configure_pour_la_classe_remplace_la_mention_et_la_decision_suggerees_par_defaut(): void
+    {
+        $admin = $this->userWithRole('admin');
+        [$first] = $this->terms;
+        $passing = $this->pupil('Awa');
+        $failing = $this->pupil('Bakary');
+        $this->grade($passing, $first, $this->math, 14);
+        $this->grade($failing, $first, $this->math, 8);
+
+        $this->actingAs($admin)
+            ->putJson("/api/classes/{$this->class->id}/grade-scale", [
+                'bands' => [
+                    ['min_average' => 0, 'max_average' => 9.99, 'label' => 'Zone rouge', 'decision' => 'excluded'],
+                ],
+            ])
+            ->assertOk();
+
+        $rows = collect($this->actingAs($admin)->getJson("/api/results?school_class_id={$this->class->id}&period=annual")->json('data.rows'))
+            ->keyBy('student.id');
+
+        // Bakary (8) tombe dans la tranche du bareme : mention et decision du bareme, pas celles par defaut.
+        $this->assertSame('Zone rouge', $rows[$failing->id]['mention']);
+        $this->assertSame('excluded', $rows[$failing->id]['suggested_decision']['value']);
+
+        // Awa (14) n'est couverte par aucune tranche : elle retombe sur le comportement global existant.
+        $this->assertSame('Bien', $rows[$passing->id]['mention']);
+        $this->assertSame('admitted', $rows[$passing->id]['suggested_decision']['value']);
+    }
+
+    #[Test]
     public function la_validation_de_classe_enregistre_les_decisions_suggerees_sans_ecraser_les_corrections(): void
     {
         $admin = $this->userWithRole('admin');

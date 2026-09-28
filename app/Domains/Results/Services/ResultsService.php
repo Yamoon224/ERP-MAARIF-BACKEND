@@ -36,6 +36,7 @@ final class ResultsService
         private readonly GradeRepositoryContract $grades,
         private readonly PromotionDecisionRepositoryContract $decisions,
         private readonly AcademicYearService $years,
+        private readonly GradeScaleService $gradeScale,
     ) {}
 
     public function passMark(): float
@@ -100,10 +101,10 @@ final class ResultsService
             'student' => $this->studentPayload($row['enrollment']->student),
             'average' => $row['average'],
             'rank' => $row['rank'],
-            'mention' => Mention::forAverage($row['average']),
+            'mention' => $this->gradeScale->appreciation($class->id, $row['average']),
             'grades_count' => $row['grades_count'],
             'subjects_count' => count($row['subjects']),
-            ...$this->decisionPayload($period->isAnnual(), $row['average'], $saved->get($row['enrollment']->id)),
+            ...$this->decisionPayload($period->isAnnual(), $class->id, $row['average'], $saved->get($row['enrollment']->id)),
         ])->values()->all();
 
         return [
@@ -141,7 +142,7 @@ final class ResultsService
         $allTermIds = collect($periods)->flatMap(fn (ResultPeriod $period) => $period->termIds)->unique()->values()->all();
         $grades = $this->grades->forStudentsAndTerms($studentIds, $allTermIds);
 
-        $results = array_map(function (ResultPeriod $period) use ($student, $cohort, $grades): array {
+        $results = array_map(function (ResultPeriod $period) use ($student, $cohort, $grades, $class): array {
             if ($cohort->isNotEmpty()) {
                 $computed = $this->compute($cohort, $grades, $period);
                 $own = $computed['rows']->first(fn (array $candidate) => $candidate['enrollment']->student_id === $student->id);
@@ -162,7 +163,7 @@ final class ResultsService
                 'average' => $average,
                 'rank' => $rank,
                 'ranked_count' => $ranked,
-                'mention' => Mention::forAverage($average),
+                'mention' => $this->gradeScale->appreciation($class?->id, $average),
                 'subjects' => $subjects,
             ];
         }, $periods);
@@ -176,7 +177,7 @@ final class ResultsService
             'school_class' => $class !== null ? ['id' => $class->id, 'name' => $class->name, 'level' => $class->level] : null,
             'pass_mark' => $this->passMark(),
             'periods' => $results,
-            ...$this->decisionPayload($annual !== null, $annual['average'] ?? null, $saved),
+            ...$this->decisionPayload($annual !== null, $class?->id, $annual['average'] ?? null, $saved),
         ];
     }
 
@@ -282,19 +283,19 @@ final class ResultsService
 
     /**
      * Decision suggeree et decision enregistree. Vides hors de la periode
-     * annuelle : on ne decide d'un passage qu'a la fin de l'annee.
+     * annuelle : on ne decide d'un passage qu'a la fin de l'annee. La
+     * suggestion suit le bareme de la classe si elle en a un (voir
+     * GradeScaleService), sinon le seuil de passage global.
      *
      * @return array{suggested_decision: array{value: string, label: string}|null, decision: array<string, mixed>|null}
      */
-    private function decisionPayload(bool $annual, ?float $average, ?PromotionDecision $saved): array
+    private function decisionPayload(bool $annual, ?string $schoolClassId, ?float $average, ?PromotionDecision $saved): array
     {
         if (! $annual) {
             return ['suggested_decision' => null, 'decision' => null];
         }
 
-        $suggested = $average === null
-            ? null
-            : ($average >= $this->passMark() ? PromotionDecisionType::Admitted : PromotionDecisionType::Repeat);
+        $suggested = $this->gradeScale->suggestedDecision($schoolClassId, $average, $this->passMark());
 
         return [
             'suggested_decision' => $suggested === null ? null : ['value' => $suggested->value, 'label' => $suggested->label()],
