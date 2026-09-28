@@ -9,7 +9,6 @@ use App\Domains\Results\Contracts\PromotionDecisionRepositoryContract;
 use App\Domains\Results\Enums\PromotionDecisionType;
 use App\Domains\Results\Exceptions\ResultsException;
 use App\Domains\Results\Support\AverageCalculator;
-use App\Domains\Results\Support\Mention;
 use App\Domains\Results\Support\ResultPeriod;
 use App\Domains\Students\Contracts\EnrollmentRepositoryContract;
 use App\Models\Enrollment;

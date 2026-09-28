@@ -44,7 +44,9 @@ use App\Domains\Grades\Repositories\EloquentGradeRepository;
 use App\Domains\Notifications\Contracts\NotificationSenderContract;
 use App\Domains\Notifications\Senders\ArrayNotificationSender;
 use App\Domains\Notifications\Senders\LogNotificationSender;
+use App\Domains\Results\Contracts\GradeScaleRepositoryContract;
 use App\Domains\Results\Contracts\PromotionDecisionRepositoryContract;
+use App\Domains\Results\Repositories\EloquentGradeScaleRepository;
 use App\Domains\Results\Repositories\EloquentPromotionDecisionRepository;
 use App\Domains\Roles\Contracts\RoleRepositoryContract;
 use App\Domains\Roles\Repositories\EloquentRoleRepository;
@@ -101,6 +103,7 @@ class DomainServiceProvider extends ServiceProvider
 
         AdmissionRepositoryContract::class => EloquentAdmissionRepository::class,
         PromotionDecisionRepositoryContract::class => EloquentPromotionDecisionRepository::class,
+        GradeScaleRepositoryContract::class => EloquentGradeScaleRepository::class,
     ];
 
     public function register(): void

@@ -26,6 +26,7 @@ use App\Domains\Grades\Http\Controllers\GradeController;
 use App\Domains\Notifications\Http\Controllers\NotificationLogController;
 use App\Domains\Reporting\Http\Controllers\DashboardController;
 use App\Domains\Reporting\Http\Controllers\TermOverviewController;
+use App\Domains\Results\Http\Controllers\GradeScaleController;
 use App\Domains\Results\Http\Controllers\ResultsController;
 use App\Domains\Roles\Http\Controllers\PermissionController;
 use App\Domains\Roles\Http\Controllers\RoleController;
@@ -34,6 +35,7 @@ use App\Domains\Shared\Http\Controllers\HealthController;
 use App\Domains\Students\Http\Controllers\EnrollmentController;
 use App\Domains\Students\Http\Controllers\StudentCardController;
 use App\Domains\Students\Http\Controllers\StudentController;
+use App\Domains\Students\Http\Controllers\StudentImportController;
 use App\Domains\Users\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -147,6 +149,8 @@ Route::middleware(['auth:sanctum', 'account_type:staff'])->group(function (): vo
         Route::delete('/students/{student}', [StudentController::class, 'destroy']);
         Route::post('/students/{student}/reset-password', [StudentController::class, 'resetPassword']);
         Route::post('/students/{student}/enrollments', [EnrollmentController::class, 'store']);
+        // Import en masse depuis un tableur (CSV/Excel), pour migrer les donnees d'un systeme existant.
+        Route::post('/students/import', [StudentImportController::class, 'import']);
 
         // Carte scolaire imprimable (QR code de pointage — option 2).
         Route::get('/students/{student}/card', [StudentCardController::class, 'show']);
@@ -157,11 +161,15 @@ Route::middleware(['auth:sanctum', 'account_type:staff'])->group(function (): vo
     Route::middleware('permission:results.view')->group(function (): void {
         Route::get('/results', [ResultsController::class, 'forClass']);
         Route::get('/students/{student}/results', [ResultsController::class, 'forStudent']);
+        Route::get('/classes/{schoolClass}/grade-scale', [GradeScaleController::class, 'show']);
     });
     Route::middleware('permission:results.manage')->group(function (): void {
         Route::put('/enrollments/{enrollment}/decision', [ResultsController::class, 'saveDecision']);
         Route::post('/classes/{schoolClass}/decisions/validate', [ResultsController::class, 'validateDecisions']);
         Route::post('/classes/{schoolClass}/promotions', [ResultsController::class, 'promote']);
+        // Bareme de passage et d'appreciation configurable par classe (voir GradeScaleService).
+        Route::put('/classes/{schoolClass}/grade-scale', [GradeScaleController::class, 'update']);
+        Route::post('/classes/{schoolClass}/grade-scale/duplicate', [GradeScaleController::class, 'duplicate']);
     });
 
     Route::middleware('permission:admissions.view')->group(function (): void {

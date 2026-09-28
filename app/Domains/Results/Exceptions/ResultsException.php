@@ -43,4 +43,20 @@ final class ResultsException extends DomainException
             'results_no_academic_year',
         );
     }
+
+    public static function invalidGradeScaleRange(float $min, float $max): self
+    {
+        return new self(
+            "Une tranche du barème est invalide : {$min} est supérieur à {$max}.",
+            'grade_scale_invalid_range',
+        );
+    }
+
+    public static function overlappingGradeScaleBands(): self
+    {
+        return new self(
+            'Les tranches du barème se chevauchent : chaque moyenne ne doit appartenir qu\'à une seule tranche.',
+            'grade_scale_overlapping_bands',
+        );
+    }
 }

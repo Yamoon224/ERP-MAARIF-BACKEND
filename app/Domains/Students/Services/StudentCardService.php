@@ -20,6 +20,15 @@ use Illuminate\Support\Str;
  */
 final class StudentCardService
 {
+    /**
+     * Format CR80 (carte de credit / carte PVC), en points (1 mm = 2.83464567 pt) :
+     * chaque carte occupe une page entiere, a la taille exacte imprimee par une
+     * imprimante de badges, sans marge a recadrer.
+     */
+    private const CARD_WIDTH_PT = 242.65;
+
+    private const CARD_HEIGHT_PT = 153.03;
+
     public function __construct(private readonly StudentRepositoryContract $students) {}
 
     public function ensureToken(Student $student): string
@@ -78,7 +87,7 @@ final class StudentCardService
         ], $students);
 
         return Pdf::loadView('exports.student-card', ['cards' => $cards])
-            ->setPaper('a4')
+            ->setPaper([0, 0, self::CARD_WIDTH_PT, self::CARD_HEIGHT_PT])
             ->output();
     }
 
