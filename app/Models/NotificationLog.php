@@ -39,7 +39,20 @@ class NotificationLog extends Model
             'type' => NotificationType::class,
             'status' => NotificationStatus::class,
             'sent_at' => 'datetime',
+            'read_at' => 'datetime',
         ];
+    }
+
+    /** Marque le message comme lu (etat partage entre tout le personnel, pas par utilisateur). */
+    public function markRead(): void
+    {
+        $this->forceFill(['read_at' => now()])->save();
+    }
+
+    /** Retire la marque de lecture, pour annuler un clic malheureux. */
+    public function markUnread(): void
+    {
+        $this->forceFill(['read_at' => null])->save();
     }
 
     /** @return BelongsTo<Student, $this> */

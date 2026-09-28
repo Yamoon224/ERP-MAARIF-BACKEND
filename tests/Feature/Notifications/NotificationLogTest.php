@@ -11,6 +11,8 @@ use App\Domains\Notifications\Senders\ArrayNotificationSender;
 use App\Models\AdmissionApplication;
 use App\Models\NotificationLog;
 use App\Models\Student;
+use App\Models\User;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
@@ -243,6 +245,52 @@ class NotificationLogTest extends TestCase
         }
 
         $this->assertSame(NotificationStatus::Failed, $log->refresh()->status);
+    }
+
+    #[Test]
+    public function un_message_se_marque_comme_lu_puis_non_lu(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $log = $this->log(['student_id' => Student::factory()->create()->id]);
+
+        $this->actingAs($admin)->getJson('/api/notification-logs')->assertJsonPath('data.0.is_read', false)->assertJsonPath('data.0.read_at', null);
+
+        $this->actingAs($admin)->postJson("/api/notification-logs/{$log->id}/read")
+            ->assertOk()
+            ->assertJsonPath('data.is_read', true);
+        $this->assertNotNull($log->refresh()->read_at);
+
+        $this->actingAs($admin)->deleteJson("/api/notification-logs/{$log->id}/read")
+            ->assertOk()
+            ->assertJsonPath('data.is_read', false);
+        $this->assertNull($log->refresh()->read_at);
+    }
+
+    #[Test]
+    public function la_liste_se_filtre_par_statut_de_lecture(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $student = Student::factory()->create();
+        $read = $this->log(['student_id' => $student->id]);
+        $this->log(['student_id' => $student->id]);
+        $read->markRead();
+
+        $this->actingAs($admin)->getJson('/api/notification-logs?read=1')->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $read->id);
+        $this->actingAs($admin)->getJson('/api/notification-logs?read=0')->assertJsonCount(1, 'data');
+    }
+
+    #[Test]
+    public function marquer_comme_lu_ne_demande_que_le_droit_de_consulter_le_journal(): void
+    {
+        // Marquer comme lu ne modifie ni n'envoie rien : c'est un aide-memoire de consultation, pas une
+        // action de gestion (voir routes/api.php) — un role qui peut seulement consulter doit y avoir droit.
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $viewer = User::factory()->create();
+        $viewer->givePermissionTo('notifications.view');
+        $log = $this->log(['student_id' => Student::factory()->create()->id]);
+
+        $this->actingAs($viewer)->postJson("/api/notification-logs/{$log->id}/read")->assertOk()->assertJsonPath('data.is_read', true);
+        $this->actingAs($viewer)->postJson("/api/notification-logs/{$log->id}/resend")->assertForbidden();
     }
 
     #[Test]

@@ -254,6 +254,9 @@ Route::middleware(['auth:sanctum', 'account_type:staff'])->group(function (): vo
     Route::middleware('permission:notifications.view')->group(function (): void {
         Route::get('/notification-logs', [NotificationLogController::class, 'index']);
         Route::get('/notification-logs/summary', [NotificationLogController::class, 'summary']);
+        // Marquer comme lu ne modifie ni n'envoie rien : juste un aide-memoire partage pour le personnel qui consulte le journal.
+        Route::post('/notification-logs/{notificationLog}/read', [NotificationLogController::class, 'markRead']);
+        Route::delete('/notification-logs/{notificationLog}/read', [NotificationLogController::class, 'markUnread']);
     });
     Route::middleware('permission:notifications.manage')->group(function (): void {
         Route::post('/notification-logs/{notificationLog}/resend', [NotificationLogController::class, 'resend']);

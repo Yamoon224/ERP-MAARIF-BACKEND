@@ -32,6 +32,8 @@ class NotificationLogResource extends JsonResource
             'attempts' => $this->attempts,
             'error' => $this->error,
             'sent_at' => $this->sent_at?->toIso8601String(),
+            'read_at' => $this->read_at?->toIso8601String(),
+            'is_read' => $this->read_at !== null,
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }

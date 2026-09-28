@@ -62,12 +62,29 @@ class NotificationLogController extends Controller
         return new NotificationLogResource($log->load(['student:id,first_name,last_name', 'admissionApplication:id,first_name,last_name,reference']));
     }
 
+    /** Marque ce message comme lu, pour le distinguer de ce qui reste a traiter dans le journal. */
+    public function markRead(NotificationLog $notificationLog): NotificationLogResource
+    {
+        $notificationLog->markRead();
+
+        return new NotificationLogResource($notificationLog->load(['student:id,first_name,last_name', 'admissionApplication:id,first_name,last_name,reference']));
+    }
+
+    /** Annule la marque de lecture. */
+    public function markUnread(NotificationLog $notificationLog): NotificationLogResource
+    {
+        $notificationLog->markUnread();
+
+        return new NotificationLogResource($notificationLog->load(['student:id,first_name,last_name', 'admissionApplication:id,first_name,last_name,reference']));
+    }
+
     private function validateFilters(Request $request): void
     {
         $request->validate([
             'status' => ['nullable', Rule::in(array_column(NotificationStatus::cases(), 'value'))],
             'type' => ['nullable', Rule::in(array_column(NotificationType::cases(), 'value'))],
             'channel' => ['nullable', Rule::in(array_column(NotificationChannel::cases(), 'value'))],
+            'read' => ['nullable', 'boolean'],
         ]);
     }
 
@@ -82,6 +99,11 @@ class NotificationLogController extends Controller
                 ! $ignoreStatus ? $request->string('status')->toString() : null,
                 fn ($query, $status) => $query->where('status', $status),
             )
+            ->when($request->has('read'), fn ($query) => $query->when(
+                $request->boolean('read'),
+                fn ($read) => $read->whereNotNull('read_at'),
+                fn ($unread) => $unread->whereNull('read_at'),
+            ))
             ->when($request->string('search')->toString(), fn ($query, $search) => $query->where(
                 fn ($match) => $match
                     ->where('recipient', 'like', "%{$search}%")

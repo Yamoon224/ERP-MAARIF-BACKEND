@@ -30,7 +30,7 @@ final class PermissionCatalog
         'students.view' => 'Consulter le dossier des élèves et leurs bulletins.',
         'students.manage' => 'Inscrire, modifier et désactiver un élève.',
         'grades.manage' => 'Saisir et modifier les notes.',
-        'attendance.manage' => 'Saisir les présences et absences.',
+        'attendance.manage' => 'Saisir les présences et absences, y compris le pointage par scan de QR code (carte élève ou portail).',
         'discipline.manage' => 'Créer des convocations et des sanctions.',
         'notifications.view' => 'Consulter le journal des notifications envoyées aux tuteurs.',
         'notifications.manage' => 'Renvoyer un message en échec depuis le journal des notifications.',
