@@ -132,31 +132,31 @@ Always run `cloud deploy:monitor -n` after every deploy. If it fails, inspect th
 Delegate high-output operations to subagents using the Task tool to keep the main context window small. Only the summary returns; verbose output stays in the subagent's context.
 
 Delegate these to a subagent:
-- `cloud deploy:monitor -n` — deployment logs can be very long
-- `cloud deployment:get --json -n` — full deployment details
-- `cloud <resource>:list --json -n` — listing many resources produces large JSON
-- `cloud command:run` — when output may be long
-- `cloud usage --detailed --json -n` — the payload includes details for every database, cache, bucket, websocket, and application
+- `cloud deploy:monitor -n` - deployment logs can be very long
+- `cloud deployment:get --json -n` - full deployment details
+- `cloud <resource>:list --json -n` - listing many resources produces large JSON
+- `cloud command:run` - when output may be long
+- `cloud usage --detailed --json -n` - the payload includes details for every database, cache, bucket, websocket, and application
 - Fetching docs from https://cloud.laravel.com/docs/llms.txt via `WebFetch`
 
 Keep in the main context:
-- Short commands like `:create`, `:delete`, `:update` — output is small
-- `cloud deploy -n` — you need the deployment ID immediately
+- Short commands like `:create`, `:delete`, `:update` - output is small
+- `cloud deploy -n` - you need the deployment ID immediately
 - Any command where you need the result for the next step right away
 
 ### Rules
 
 Follow these rules:
-- Flag selection — always use the documented combos above
-- Deploy sequence — deploy then monitor, never skip monitoring
-- Destructive commands — always confirm with the user first, show the command and wait for approval. This includes deleting applications, environments, databases, caches, buckets, domains, or secrets.
-- Error loop — diagnose, fix once, ask user if it fails again
+- Flag selection - always use the documented combos above
+- Deploy sequence - deploy then monitor, never skip monitoring
+- Destructive commands - always confirm with the user first, show the command and wait for approval. This includes deleting applications, environments, databases, caches, buckets, domains, or secrets.
+- Error loop - diagnose, fix once, ask user if it fails again
 
 Use judgment for:
-- Instance sizes, regions, cluster types — ask the user if not specified
-- Which resources to provision — based on what the user describes
-- Order of provisioning — no strict sequence required
-- How to present output — summarize, show raw, or extract fields based on context
+- Instance sizes, regions, cluster types - ask the user if not specified
+- Which resources to provision - based on what the user describes
+- Order of provisioning - no strict sequence required
+- How to present output - summarize, show raw, or extract fields based on context
 
 ### Secrets
 
@@ -171,7 +171,7 @@ cloud environment-secret:list {environment} --json -n
 
 Pipe the value in. `--value=` works, but leaves the plaintext in shell history and the process list.
 
-`secret:update`, `secret:delete`, and `environment-secret:attach` take secret IDs, not names — names are not unique. Read IDs from `cloud secret:list --json -n`.
+`secret:update`, `secret:delete`, and `environment-secret:attach` take secret IDs, not names - names are not unique. Read IDs from `cloud secret:list --json -n`.
 
 There is no `secret:get`, and no way to detach a secret from a single environment. `secret:delete` removes it and detaches it everywhere.
 
@@ -189,8 +189,8 @@ Run PHP code directly in a Cloud environment:
 cloud tinker {environment} --code='Your PHP code here' --timeout=60 -n
 ```
 
-- `--code` — PHP code to execute (required in non-interactive mode)
-- `--timeout` — maximum number of seconds to wait for output (default: 60)
+- `--code` - PHP code to execute (required in non-interactive mode)
+- `--timeout` - maximum number of seconds to wait for output (default: 60)
 
 The code must explicitly output results using `echo`, `dump`, or similar; expressions alone produce no output.
 
@@ -204,14 +204,14 @@ Run shell commands on a Cloud environment:
 cloud command:run {environment} --cmd='your command here' -n
 ```
 
-- `--cmd` — the command to run (required in non-interactive mode)
-- `--no-monitor` — skip real-time output streaming
-- `--copy-output` — copy output to clipboard
+- `--cmd` - the command to run (required in non-interactive mode)
+- `--no-monitor` - skip real-time output streaming
+- `--copy-output` - copy output to clipboard
 
 Review past commands:
 
-- `cloud command:list {environment} --json -n` — list command history
-- `cloud command:get {commandId} --json -n` — get details and output of a specific command
+- `cloud command:list {environment} --json -n` - list command history
+- `cloud command:get {commandId} --json -n` - get details and output of a specific command
 
 ### Billing and Usage
 
@@ -221,10 +221,10 @@ View billing and usage for the current organization:
 cloud usage --json -n
 ```
 
-- `--period=current|previous|1|2|3` — Billing period (default: `current`; `1`, `2`, and `3` are one, two, and three periods back, respectively). Other values return an error.
-- `--environment=<id>` — filter usage to a single environment
-- `--detailed` — include per-application, per-resource, and per-add-on breakdowns
-- `--json` — machine-readable output (always pair with `-n`)
+- `--period=current|previous|1|2|3` - Billing period (default: `current`; `1`, `2`, and `3` are one, two, and three periods back, respectively). Other values return an error.
+- `--environment=<id>` - filter usage to a single environment
+- `--detailed` - include per-application, per-resource, and per-add-on breakdowns
+- `--json` - machine-readable output (always pair with `-n`)
 
 Common queries:
 
@@ -236,9 +236,9 @@ All amounts are in cents. Keys are camelCase at every level (e.g., `currentSpend
 
 ### Config
 
-1. Environment: `LARAVEL_CLOUD_TOKEN` — an API token, taking precedence over any saved one (empty counts as unset)
-2. Global: `~/.config/cloud/config.json` — auth tokens and preferences
-3. Repo-local: `.cloud/config.json` — app and environment defaults (set by `cloud repo:config {application} -n`)
+1. Environment: `LARAVEL_CLOUD_TOKEN` - an API token, taking precedence over any saved one (empty counts as unset)
+2. Global: `~/.config/cloud/config.json` - auth tokens and preferences
+3. Repo-local: `.cloud/config.json` - app and environment defaults (set by `cloud repo:config {application} -n`)
 4. CLI arguments override both config files
 
 Pass the application to `repo:config`. Without it, the command must prompt and fails under `-n` when the organization has more than one application. Deploy commands do not need these defaults; pass the application and environment to them directly.

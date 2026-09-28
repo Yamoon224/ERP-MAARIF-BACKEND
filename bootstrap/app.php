@@ -68,7 +68,7 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             return response()->json([
-                'message' => 'Non authentifie — reconnectez-vous.',
+                'message' => 'Non authentifie - reconnectez-vous.',
                 'error_code' => 'unauthenticated',
                 'context' => (object) [],
             ], 401);

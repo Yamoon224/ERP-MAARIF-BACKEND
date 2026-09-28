@@ -41,18 +41,18 @@ use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| API REST — ERP Maarif
+| API REST - ERP Maarif
 |--------------------------------------------------------------------------
 |
 | Trois zones :
 |
-|   1. **Publique** — connexions. Le personnel se connecte par e-mail, le
+|   1. **Publique** - connexions. Le personnel se connecte par e-mail, le
 |      parent par le matricule de son enfant (cahier des charges 3.1).
 |
-|   2. **Personnel** — administration et enseignement. Jeton Sanctum,
+|   2. **Personnel** - administration et enseignement. Jeton Sanctum,
 |      cloisonne par `account_type:staff` puis par permission Spatie.
 |
-|   3. **Portail parent** — lecture seule des informations d'un seul eleve,
+|   3. **Portail parent** - lecture seule des informations d'un seul eleve,
 |      celui dont le jeton a ete emis (`account_type:parent`). Aucune route
 |      de ce groupe ne lit d'identifiant d'eleve dans la requete : c'est
 |      toujours `$request->user()` qui le fournit (voir les methodes `mine`
@@ -152,7 +152,7 @@ Route::middleware(['auth:sanctum', 'account_type:staff'])->group(function (): vo
         // Import en masse depuis un tableur (CSV/Excel), pour migrer les donnees d'un systeme existant.
         Route::post('/students/import', [StudentImportController::class, 'import']);
 
-        // Carte scolaire imprimable (QR code de pointage — option 2).
+        // Carte scolaire imprimable (QR code de pointage - option 2).
         Route::get('/students/{student}/card', [StudentCardController::class, 'show']);
         Route::post('/students/{student}/card/regenerate-token', [StudentCardController::class, 'regenerateToken']);
         Route::get('/classes/{schoolClass}/students/cards', [StudentCardController::class, 'forClass']);
@@ -264,7 +264,7 @@ Route::middleware(['auth:sanctum', 'account_type:staff'])->group(function (): vo
 });
 
 // =============================================================================
-// Portail parent — lecture seule, limitee a l'eleve du jeton
+// Portail parent - lecture seule, limitee a l'eleve du jeton
 // =============================================================================
 Route::middleware(['auth:sanctum', 'account_type:parent'])->group(function (): void {
     Route::post('/parent/logout', [ParentAuthController::class, 'logout']);

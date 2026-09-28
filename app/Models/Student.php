@@ -18,7 +18,7 @@ use Laravel\Sanctum\HasApiTokens;
  * `Student` est authentifiable a part entiere : c'est par le couple
  * matricule/mot de passe de l'eleve que son parent accede au portail (cahier
  * des charges 3.1). Un jeton Sanctum emis pour un `Student` donne donc acces
- * en lecture aux informations de cet eleve uniquement — jamais a un autre
+ * en lecture aux informations de cet eleve uniquement - jamais a un autre
  * dossier, meme dans une fratrie inscrite dans le meme etablissement.
  *
  * @property string $id

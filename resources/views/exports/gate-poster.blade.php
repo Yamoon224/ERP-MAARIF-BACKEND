@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="utf-8">
-    <title>Pointage au portail — {{ config('app.name') }}</title>
+    <title>Pointage au portail - {{ config('app.name') }}</title>
     <style>
         body { font-family: DejaVu Sans, sans-serif; color: #101828; text-align: center; padding-top: 60px; }
         h1 { font-size: 26px; margin: 0 0 6px; color: #1e40af; }

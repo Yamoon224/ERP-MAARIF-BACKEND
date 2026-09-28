@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * Marque d'un message du journal comme lu par le personnel : un etat partage,
- * pas par utilisateur (voir NotificationLogController::markRead()) — suffisant
+ * pas par utilisateur (voir NotificationLogController::markRead()) - suffisant
  * pour distinguer d'un coup d'oeil ce qui reste a traiter dans le journal.
  */
 return new class extends Migration

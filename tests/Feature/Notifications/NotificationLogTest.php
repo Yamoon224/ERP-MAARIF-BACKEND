@@ -283,7 +283,7 @@ class NotificationLogTest extends TestCase
     public function marquer_comme_lu_ne_demande_que_le_droit_de_consulter_le_journal(): void
     {
         // Marquer comme lu ne modifie ni n'envoie rien : c'est un aide-memoire de consultation, pas une
-        // action de gestion (voir routes/api.php) — un role qui peut seulement consulter doit y avoir droit.
+        // action de gestion (voir routes/api.php) - un role qui peut seulement consulter doit y avoir droit.
         $this->seed(RolesAndPermissionsSeeder::class);
         $viewer = User::factory()->create();
         $viewer->givePermissionTo('notifications.view');

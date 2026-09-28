@@ -1,4 +1,4 @@
-# ERP Maarif — Backend
+# ERP Maarif - Backend
 
 API REST Laravel pour le suivi scolaire des eleves (notes, presences, convocations, sanctions), consultable par les parents via le matricule de leur enfant. Voir le [cahier des charges](../cahier%20de%20charge.pdf).
 

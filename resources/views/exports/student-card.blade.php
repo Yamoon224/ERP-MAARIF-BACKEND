@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="utf-8">
-    <title>Carte scolaire — {{ config('app.name') }}</title>
+    <title>Carte scolaire - {{ config('app.name') }}</title>
     <style>
         /* Format CR80 (85,6 x 54 mm), une carte par page : chaque page est imprimee
            directement sur une carte PVC vierge par l'imprimante de badges, sans
@@ -28,12 +28,12 @@
     @foreach ($cards as $card)
         <div class="card">
             <div class="band">
-                <p class="school">{{ config('app.name') }} — Carte élève</p>
+                <p class="school">{{ config('app.name') }} - Carte élève</p>
             </div>
             <div class="body">
                 <p class="name">{{ $card['student']->fullName() }}</p>
                 <p class="matricule">Matricule : {{ $card['student']->matricule }}</p>
-                <p class="class">{{ $card['student']->schoolClass?->name ?? '—' }}</p>
+                <p class="class">{{ $card['student']->schoolClass?->name ?? '-' }}</p>
             </div>
             <div class="qr">
                 <img src="{{ $card['qrDataUri'] }}" alt="QR code de pointage">

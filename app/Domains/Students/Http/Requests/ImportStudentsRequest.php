@@ -15,7 +15,7 @@ class ImportStudentsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // sql : export d'un systeme existant (voir StudentImportService, qui ne fait que le lire — jamais l'executer).
+            // sql : export d'un systeme existant (voir StudentImportService, qui ne fait que le lire - jamais l'executer).
             'file' => ['required', 'file', 'mimes:csv,txt,xlsx,xls,sql', 'max:5120'],
             'dry_run' => ['nullable', 'boolean'],
         ];

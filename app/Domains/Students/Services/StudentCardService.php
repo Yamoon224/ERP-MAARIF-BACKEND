@@ -12,7 +12,7 @@ use Illuminate\Support\Str;
 
 /**
  * Carte scolaire imprimable de l'eleve, avec un QR code que le surveillant
- * scanne au portail pour le pointer present (cahier des charges — pointage
+ * scanne au portail pour le pointer present (cahier des charges - pointage
  * par QR code, option 2). Le QR encode uniquement le jeton opaque de
  * l'eleve (`qr_token`), jamais son matricule : une carte perdue se
  * neutralise en regenerant ce jeton, sans toucher au compte du portail

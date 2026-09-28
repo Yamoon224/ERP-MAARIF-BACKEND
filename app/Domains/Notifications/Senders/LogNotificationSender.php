@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Mail;
 
 /**
  * Pilote par defaut : envoie reellement les e-mails via le mailer configure
- * (`MAIL_MAILER`, `array` ou `log` en developpement), et journalise les SMS —
+ * (`MAIL_MAILER`, `array` ou `log` en developpement), et journalise les SMS -
  * aucune passerelle SMS n'est cablee dans ce depot de reference, mais le
  * point d'extension est unique (voir App\Providers\DomainServiceProvider).
  *

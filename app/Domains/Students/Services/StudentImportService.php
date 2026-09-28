@@ -25,7 +25,7 @@ use Throwable;
  * Chaque ligne est traitee independamment : une ligne invalide est
  * signalee et n'empeche pas les autres d'etre importees. C'est le bon
  * compromis pour une migration ponctuelle de donnees externes forcement
- * imparfaites — contrairement a l'appel de classe (voir
+ * imparfaites - contrairement a l'appel de classe (voir
  * AttendanceService::recordClass()), qui est une saisie quotidienne ou
  * "tout ou rien" a du sens.
  */
@@ -181,7 +181,7 @@ final class StudentImportService
     /**
      * Lit un export SQL (ex. mysqldump) comme du texte, sans jamais l'executer : on
      * en extrait uniquement les instructions INSERT INTO dont la liste de colonnes
-     * couvre au moins un prenom et un nom reconnus — les autres tables d'un dump
+     * couvre au moins un prenom et un nom reconnus - les autres tables d'un dump
      * complet (paiements, classes...) sont ignorees.
      *
      * @return list<array<string, string>> une ligne = en-tetes reconnus => valeur brute

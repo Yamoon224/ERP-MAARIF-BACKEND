@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Reglage (unique) du pointage geolocalise au portail (cahier des charges —
+ * Reglage (unique) du pointage geolocalise au portail (cahier des charges -
  * pointage par QR code, option 1). Voir
  * App\Domains\Attendance\Contracts\AttendanceGateSettingRepositoryContract::current(),
  * qui garantit qu'une seule ligne existe.

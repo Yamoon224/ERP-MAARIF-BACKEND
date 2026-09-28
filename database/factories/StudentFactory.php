@@ -25,7 +25,7 @@ class StudentFactory extends Factory
             // Sequence en memoire plutot que App\Domains\Students\Support\MatriculeGenerator :
             // ce dernier lit le dernier matricule enregistre en base, or
             // Factory::count(n)->create() evalue les n definitions avant
-            // d'en enregistrer aucune — les n eleves y liraient donc tous
+            // d'en enregistrer aucune - les n eleves y liraient donc tous
             // "aucun matricule existant" et se verraient attribuer le meme.
             'matricule' => sprintf('MAA-%s-%06d', now()->year, ++self::$sequence),
             'password' => self::$password ??= Hash::make('password'),

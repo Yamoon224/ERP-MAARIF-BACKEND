@@ -10,7 +10,7 @@ use Illuminate\Support\Carbon;
  * du parent au portail (cahier des charges 2 et 3.1).
  *
  * Format `MAA-{annee}-{sequence}`, ex. `MAA-2026-000123`. L'annee se lit sans
- * requete — utile sur un bulletin imprime ou une convocation — et la
+ * requete - utile sur un bulletin imprime ou une convocation - et la
  * sequence est incrementale par annee plutot que globale, pour qu'elle reste
  * courte meme apres des annees de fonctionnement.
  */

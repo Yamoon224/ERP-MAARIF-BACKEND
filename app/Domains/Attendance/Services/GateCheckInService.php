@@ -13,7 +13,7 @@ use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Writer\PngWriter;
 
 /**
- * Pointage geolocalise au portail (cahier des charges — pointage par QR
+ * Pointage geolocalise au portail (cahier des charges - pointage par QR
  * code, option 1) : un QR fixe, imprime et affiche au portail, que le
  * parent ou l'eleve scanne depuis le portail. Le pointage n'est enregistre
  * que si l'appareil declare une position a moins du rayon configure des

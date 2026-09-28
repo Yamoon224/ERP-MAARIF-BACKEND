@@ -96,7 +96,7 @@ final class AttendanceService
     }
 
     /**
-     * Pointage par carte scolaire (cahier des charges — pointage par QR
+     * Pointage par carte scolaire (cahier des charges - pointage par QR
      * code, option 2) : le surveillant scanne le QR de la carte de l'eleve
      * depuis son interface, ce qui suffit a le pointer present pour
      * aujourd'hui.

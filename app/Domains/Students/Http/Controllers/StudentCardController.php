@@ -10,7 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 
 /**
- * Carte scolaire imprimable de l'eleve (QR code de pointage — cahier des
+ * Carte scolaire imprimable de l'eleve (QR code de pointage - cahier des
  * charges, option 2), reservee au personnel qui gere les eleves.
  */
 class StudentCardController extends Controller

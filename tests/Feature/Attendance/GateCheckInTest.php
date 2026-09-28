@@ -9,7 +9,7 @@ use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
-/** Pointage geolocalise au portail (cahier des charges — pointage par QR code, option 1). */
+/** Pointage geolocalise au portail (cahier des charges - pointage par QR code, option 1). */
 class GateCheckInTest extends TestCase
 {
     use RefreshDatabase;

@@ -87,8 +87,8 @@ final class BulletinExportService
         $identity = [
             ['Élève', $bulletin['student']],
             ['Matricule', $bulletin['matricule']],
-            ['Classe', $bulletin['class'] ?? '—'],
-            ['Période', "{$bulletin['term']} — {$bulletin['academic_year']}"],
+            ['Classe', $bulletin['class'] ?? '-'],
+            ['Période', "{$bulletin['term']} - {$bulletin['academic_year']}"],
         ];
         foreach ($identity as $offset => [$label, $value]) {
             $row = 3 + $offset;
@@ -118,7 +118,7 @@ final class BulletinExportService
         }
 
         $sheet->setCellValue("A{$row}", 'Moyenne générale');
-        $sheet->setCellValue("E{$row}", $bulletin['overall_average'] ?? '—');
+        $sheet->setCellValue("E{$row}", $bulletin['overall_average'] ?? '-');
         $sheet->getStyle("A{$row}:E{$row}")->getFont()->setBold(true);
         $sheet->getStyle("A{$row}:E{$row}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('EAF2FF');
 

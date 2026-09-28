@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="utf-8">
-    <title>Bulletin de notes — {{ $bulletin['student'] }}</title>
+    <title>Bulletin de notes - {{ $bulletin['student'] }}</title>
     <style>
         body { font-family: DejaVu Sans, sans-serif; font-size: 12px; color: #101828; }
         h1 { font-size: 20px; margin: 0 0 4px; color: #1e40af; }
@@ -22,12 +22,12 @@
 </head>
 <body>
     <h1>Bulletin de notes</h1>
-    <p class="subtitle">{{ $bulletin['term'] }} — année scolaire {{ $bulletin['academic_year'] }}</p>
+    <p class="subtitle">{{ $bulletin['term'] }} - année scolaire {{ $bulletin['academic_year'] }}</p>
 
     <table class="identity">
         <tr><td class="label">Élève</td><td><strong>{{ $bulletin['student'] }}</strong></td></tr>
         <tr><td class="label">Matricule</td><td>{{ $bulletin['matricule'] }}</td></tr>
-        <tr><td class="label">Classe</td><td>{{ $bulletin['class'] ?? '—' }}</td></tr>
+        <tr><td class="label">Classe</td><td>{{ $bulletin['class'] ?? '-' }}</td></tr>
     </table>
 
     @if (count($bulletin['subjects']) === 0)
@@ -54,8 +54,8 @@
             </tbody>
             <tfoot>
                 <tr>
-                    <td colspan="3">Moyenne générale{{ $bulletin['mention'] ? ' — '.$bulletin['mention'] : '' }}</td>
-                    <td class="num">{{ $bulletin['overall_average'] !== null ? number_format($bulletin['overall_average'], 2, ',', '') : '—' }}</td>
+                    <td colspan="3">Moyenne générale{{ $bulletin['mention'] ? ' - '.$bulletin['mention'] : '' }}</td>
+                    <td class="num">{{ $bulletin['overall_average'] !== null ? number_format($bulletin['overall_average'], 2, ',', '') : '-' }}</td>
                 </tr>
             </tfoot>
         </table>

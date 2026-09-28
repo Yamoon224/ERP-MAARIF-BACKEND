@@ -8,7 +8,7 @@ use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
-/** Pointage par carte scolaire (cahier des charges — pointage par QR code, option 2). */
+/** Pointage par carte scolaire (cahier des charges - pointage par QR code, option 2). */
 class CardScanTest extends TestCase
 {
     use RefreshDatabase;

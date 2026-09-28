@@ -7,7 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
-/** Carte scolaire imprimable de l'eleve (cahier des charges — pointage par QR code, option 2). */
+/** Carte scolaire imprimable de l'eleve (cahier des charges - pointage par QR code, option 2). */
 class StudentCardExportTest extends TestCase
 {
     use RefreshDatabase;

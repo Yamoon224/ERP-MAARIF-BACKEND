@@ -8,7 +8,7 @@ use App\Domains\Attendance\Services\GateCheckInService;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Response;
 
-/** Reglage du pointage geolocalise au portail (cahier des charges — pointage par QR code, option 1). */
+/** Reglage du pointage geolocalise au portail (cahier des charges - pointage par QR code, option 1). */
 class GateSettingsController extends Controller
 {
     public function __construct(private readonly GateCheckInService $gate) {}

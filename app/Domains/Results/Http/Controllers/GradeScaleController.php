@@ -13,7 +13,7 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
  * Bareme de passage et d'appreciation d'une classe, configurable par
- * l'administration (cahier des charges — decision de passage automatique).
+ * l'administration (cahier des charges - decision de passage automatique).
  */
 class GradeScaleController extends Controller
 {
