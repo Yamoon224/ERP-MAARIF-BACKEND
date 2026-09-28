@@ -100,6 +100,47 @@ class StudentImportTest extends TestCase
         $this->actingAs($teacher)->post('/api/students/import', ['file' => $csv])->assertForbidden();
     }
 
+    #[Test]
+    public function un_export_sql_est_lu_sans_etre_execute(): void
+    {
+        $admin = $this->userWithRole('admin');
+
+        $sql = $this->sql(<<<'SQL'
+            -- Dump genere par un ancien systeme, avant migration.
+            CREATE TABLE `eleves` (`id` int, `prenom` varchar(100));
+            LOCK TABLES `eleves` WRITE;
+            INSERT INTO `eleves` (`prenom`, `nom`, `sexe`, `nom_tuteur`, `telephone_tuteur`) VALUES
+            ('Fatoumata', 'Camara', 'F', 'Ibrahima Camara', '+224612345678'),
+            ('Moussa', 'Diallo', 'M', 'Aissatou Diallo', '+224622334455');
+            UNLOCK TABLES;
+            INSERT INTO `paiements` (`eleve_id`, `montant`) VALUES (1, 5000);
+            SQL);
+
+        $response = $this->actingAs($admin)->post('/api/students/import', ['file' => $sql, 'dry_run' => '0']);
+
+        $response->assertOk()->assertJsonPath('data.total', 2)->assertJsonPath('data.valid', 2)->assertJsonPath('data.invalid', 0);
+        $this->assertDatabaseHas('students', ['first_name' => 'Fatoumata', 'last_name' => 'Camara']);
+        $this->assertDatabaseHas('students', ['first_name' => 'Moussa', 'last_name' => 'Diallo']);
+        // La table `paiements` n'a pas de colonnes reconnues (prenom/nom) : elle est ignoree, jamais executee.
+        $this->assertSame(2, Student::query()->count());
+    }
+
+    #[Test]
+    public function un_export_sql_avec_valeurs_null_et_echappees_est_lu_correctement(): void
+    {
+        $admin = $this->userWithRole('admin');
+
+        $sql = $this->sql(
+            "INSERT INTO eleves (prenom, nom, sexe, date_naissance, nom_tuteur, telephone_tuteur) VALUES ".
+            "('Jean', 'D\\'Almeida', 'M', NULL, 'Paul D''Almeida', '+224600000000');",
+        );
+
+        $response = $this->actingAs($admin)->post('/api/students/import', ['file' => $sql, 'dry_run' => '0']);
+
+        $response->assertOk()->assertJsonPath('data.valid', 1);
+        $this->assertDatabaseHas('students', ['first_name' => 'Jean', 'last_name' => "D'Almeida", 'birth_date' => null]);
+    }
+
     /** @param  list<list<string>>  $rows */
     private function csv(array $rows): UploadedFile
     {
@@ -111,5 +152,13 @@ class StudentImportTest extends TestCase
         fclose($handle);
 
         return new UploadedFile($path, 'eleves.csv', 'text/csv', null, true);
+    }
+
+    private function sql(string $content): UploadedFile
+    {
+        $path = tempnam(sys_get_temp_dir(), 'import').'.sql';
+        file_put_contents($path, $content);
+
+        return new UploadedFile($path, 'eleves.sql', 'application/sql', null, true);
     }
 }

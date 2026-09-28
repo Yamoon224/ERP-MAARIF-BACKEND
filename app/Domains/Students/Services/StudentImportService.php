@@ -12,8 +12,15 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 use Throwable;
 
 /**
- * Import en masse d'eleves depuis un tableur (CSV ou Excel), pour migrer les
- * donnees d'un systeme existant sans ressaisie manuelle.
+ * Import en masse d'eleves depuis un tableur (CSV ou Excel) ou un export SQL,
+ * pour migrer les donnees d'un systeme existant sans ressaisie manuelle.
+ *
+ * Un fichier .sql n'est jamais execute : il est seulement lu comme du texte
+ * pour en extraire les instructions INSERT INTO reconnues (voir
+ * parseSqlRows()). Executer tel quel le SQL d'un fichier importe exposerait
+ * l'application a un contenu non maitrise (autre table, DROP, etc.) ; on se
+ * contente donc d'en lire les valeurs, exactement comme pour une ligne de
+ * tableur.
  *
  * Chaque ligne est traitee independamment : une ligne invalide est
  * signalee et n'empeche pas les autres d'etre importees. C'est le bon
@@ -24,28 +31,50 @@ use Throwable;
  */
 final class StudentImportService
 {
-    /** En-tete de tableur normalise (minuscule, sans accent ni separateur) => champ de l'eleve. */
+    /**
+     * En-tete de tableur ou nom de colonne SQL normalise (minuscule, sans
+     * accent ni separateur) => champ de l'eleve.
+     */
     private const COLUMN_ALIASES = [
         'prenom' => 'first_name',
         'prenoms' => 'first_name',
+        'firstname' => 'first_name',
         'nom' => 'last_name',
+        'lastname' => 'last_name',
+        'surname' => 'last_name',
         'sexe' => 'gender',
         'genre' => 'gender',
+        'gender' => 'gender',
         'datenaissance' => 'birth_date',
         'ddn' => 'birth_date',
+        'birthdate' => 'birth_date',
+        'dateofbirth' => 'birth_date',
+        'dob' => 'birth_date',
         'classe' => 'class_name',
+        'class' => 'class_name',
+        'classname' => 'class_name',
+        'schoolclass' => 'class_name',
         'anneescolaire' => 'academic_year',
         'annee' => 'academic_year',
+        'academicyear' => 'academic_year',
+        'schoolyear' => 'academic_year',
         'nomtuteur' => 'guardian_name',
         'tuteur' => 'guardian_name',
         'nomdututeur' => 'guardian_name',
+        'guardianname' => 'guardian_name',
+        'parentname' => 'guardian_name',
         'telephonetuteur' => 'guardian_phone',
         'telephone' => 'guardian_phone',
         'tel' => 'guardian_phone',
+        'phone' => 'guardian_phone',
+        'guardianphone' => 'guardian_phone',
         'emailtuteur' => 'guardian_email',
         'email' => 'guardian_email',
         'mail' => 'guardian_email',
+        'guardianemail' => 'guardian_email',
+        'parentemail' => 'guardian_email',
         'adresse' => 'address',
+        'address' => 'address',
     ];
 
     public function __construct(
@@ -106,6 +135,16 @@ final class StudentImportService
     /** @return list<array<string, string>> une ligne = en-tetes reconnus => valeur brute */
     private function parseRows(UploadedFile $file): array
     {
+        if (Str::lower((string) $file->getClientOriginalExtension()) === 'sql') {
+            return $this->parseSqlRows($file);
+        }
+
+        return $this->parseSpreadsheetRows($file);
+    }
+
+    /** @return list<array<string, string>> une ligne = en-tetes reconnus => valeur brute */
+    private function parseSpreadsheetRows(UploadedFile $file): array
+    {
         $sheet = IOFactory::createReaderForFile($file->getRealPath())
             ->load($file->getRealPath())
             ->getActiveSheet();
@@ -137,6 +176,238 @@ final class StudentImportService
             // Une ligne entierement vide (fin de tableau) ne doit pas produire une erreur fantome.
             array_filter($table, fn (array $row) => implode('', $row) !== ''),
         ));
+    }
+
+    /**
+     * Lit un export SQL (ex. mysqldump) comme du texte, sans jamais l'executer : on
+     * en extrait uniquement les instructions INSERT INTO dont la liste de colonnes
+     * couvre au moins un prenom et un nom reconnus — les autres tables d'un dump
+     * complet (paiements, classes...) sont ignorees.
+     *
+     * @return list<array<string, string>> une ligne = en-tetes reconnus => valeur brute
+     */
+    private function parseSqlRows(UploadedFile $file): array
+    {
+        $content = file_get_contents($file->getRealPath());
+        if ($content === false || trim($content) === '') {
+            return [];
+        }
+
+        $rows = [];
+
+        foreach ($this->extractInsertStatements($content) as ['columns' => $columns, 'tuples' => $tuples]) {
+            $fieldsByPosition = [];
+            foreach ($columns as $index => $column) {
+                $normalized = $this->normalizeHeader($column);
+                if (isset(self::COLUMN_ALIASES[$normalized])) {
+                    $fieldsByPosition[$index] = self::COLUMN_ALIASES[$normalized];
+                }
+            }
+
+            if (! in_array('first_name', $fieldsByPosition, true) || ! in_array('last_name', $fieldsByPosition, true)) {
+                continue;
+            }
+
+            foreach ($tuples as $tuple) {
+                $row = [];
+                foreach ($fieldsByPosition as $index => $field) {
+                    $row[$field] = trim((string) ($tuple[$index] ?? ''));
+                }
+                $rows[] = $row;
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Decoupe le texte SQL en instructions INSERT INTO, sans jamais l'executer.
+     *
+     * @return list<array{columns: list<string>, tuples: list<list<string|null>>}>
+     */
+    private function extractInsertStatements(string $sql): array
+    {
+        $statements = $this->splitStatements($this->stripSqlComments($sql));
+        $inserts = [];
+
+        foreach ($statements as $statement) {
+            if (! preg_match(
+                '/^\s*INSERT\s+(?:IGNORE\s+)?INTO\s+[`"\[]?\w+[`"\]]?\s*\(([^)]*)\)\s*VALUES\s*(.+)$/is',
+                trim($statement),
+                $matches,
+            )) {
+                continue;
+            }
+
+            $columns = array_map(
+                fn (string $column) => trim($column, " \t\n\r\0\x0B`\"'"),
+                explode(',', $matches[1]),
+            );
+
+            $inserts[] = ['columns' => $columns, 'tuples' => $this->parseValueTuples($matches[2])];
+        }
+
+        return $inserts;
+    }
+
+    /** Retire les commentaires SQL (`-- ...` et `/* ... *\/`), pour ne pas les confondre avec des instructions. */
+    private function stripSqlComments(string $sql): string
+    {
+        $sql = preg_replace('#/\*.*?\*/#s', '', $sql) ?? $sql;
+
+        return preg_replace('/--.*$/m', '', $sql) ?? $sql;
+    }
+
+    /**
+     * Scinde un script SQL en instructions individuelles, sur les points-virgules qui
+     * ne sont pas a l'interieur d'une chaine entre quotes (jamais executees : on ne fait
+     * que reperer leurs limites).
+     *
+     * @return list<string>
+     */
+    private function splitStatements(string $sql): array
+    {
+        $statements = [];
+        $current = '';
+        $inString = false;
+        $quote = "'";
+        $length = strlen($sql);
+
+        for ($i = 0; $i < $length; $i++) {
+            $char = $sql[$i];
+
+            if ($inString) {
+                $current .= $char;
+                if ($char === '\\' && $i + 1 < $length) {
+                    $current .= $sql[++$i];
+
+                    continue;
+                }
+                if ($char === $quote) {
+                    if ($i + 1 < $length && $sql[$i + 1] === $quote) {
+                        $current .= $sql[++$i];
+
+                        continue;
+                    }
+                    $inString = false;
+                }
+
+                continue;
+            }
+
+            if ($char === "'" || $char === '"') {
+                $inString = true;
+                $quote = $char;
+                $current .= $char;
+
+                continue;
+            }
+
+            if ($char === ';') {
+                $statements[] = $current;
+                $current = '';
+
+                continue;
+            }
+
+            $current .= $char;
+        }
+
+        if (trim($current) !== '') {
+            $statements[] = $current;
+        }
+
+        return $statements;
+    }
+
+    /**
+     * Decoupe la partie `VALUES (...), (...)` d'un INSERT en tuples de valeurs, en
+     * respectant quotes et parentheses imbriquees dans les chaines.
+     *
+     * @return list<list<string|null>>
+     */
+    private function parseValueTuples(string $values): array
+    {
+        $tuples = [];
+        $current = [];
+        $token = '';
+        $inString = false;
+        $quote = "'";
+        $depth = 0;
+        $length = strlen($values);
+
+        for ($i = 0; $i < $length; $i++) {
+            $char = $values[$i];
+
+            if ($inString) {
+                if ($char === '\\' && $i + 1 < $length) {
+                    $token .= $values[++$i];
+
+                    continue;
+                }
+                if ($char === $quote) {
+                    if ($i + 1 < $length && $values[$i + 1] === $quote) {
+                        $token .= $values[++$i];
+
+                        continue;
+                    }
+                    $inString = false;
+
+                    continue;
+                }
+                $token .= $char;
+
+                continue;
+            }
+
+            if ($char === "'" || $char === '"') {
+                $inString = true;
+                $quote = $char;
+
+                continue;
+            }
+
+            if ($char === '(') {
+                $depth++;
+                if ($depth === 1) {
+                    $current = [];
+                    $token = '';
+                }
+
+                continue;
+            }
+
+            if ($char === ')') {
+                $depth--;
+                if ($depth === 0) {
+                    $current[] = $this->finalizeSqlValue($token);
+                    $tuples[] = $current;
+                    $token = '';
+                }
+
+                continue;
+            }
+
+            if ($depth === 1 && $char === ',') {
+                $current[] = $this->finalizeSqlValue($token);
+                $token = '';
+
+                continue;
+            }
+
+            if ($depth >= 1) {
+                $token .= $char;
+            }
+        }
+
+        return $tuples;
+    }
+
+    private function finalizeSqlValue(string $token): ?string
+    {
+        $trimmed = trim($token);
+
+        return Str::upper($trimmed) === 'NULL' ? null : $trimmed;
     }
 
     private function normalizeHeader(string $header): string
